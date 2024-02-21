@@ -3,7 +3,11 @@ from dotenv import load_dotenv
 from api_client import connect_to_breeze
 from load_contributions import load_contributions
 import streamlit as st
+import streamlit_authenticator as stauth
 import pandas as pd
+import yaml
+from yaml.loader import SafeLoader
+from streamlit_authenticator import Authenticate
 
 def get_people(breeze_api):
     # Get List of all Breeze Users   
@@ -71,47 +75,114 @@ def merge_spreasheet(df_uploaded_file, df_ppl_matched):
     return merged_df
 
 def main():
-    breeze_api = connect_to_breeze()
-    st.title('Breeze Automated Contribution Loader - ACH')
-    tab1, tab2 = st.tabs(["ACH Loader", "tab 2"])
-    with tab1:
-        st.write("""The ACH Loader loads contributions from an spreadhseet into Breeze by searching on the 
-                 Beneficiary Name and matching it with the Breeze database. 
-                 If a match is found, the contribution is loaded automatically. 
-                 If no match is found, the contribution is flagged for manual entry.""")
-        # 1. Get the list of all people in the Breeze database
-        people = get_people(breeze_api)
-        print(people)
+    hashed_passwords = stauth.Hasher(['abc', 'def']).generate()
 
-        # 2. Get spreadheet of contributions to be loaded
-        df_uploaded_file = get_upload_file()
-        print(df_uploaded_file)
+    with open('config.yaml') as file:
+        config = yaml.load(file, Loader=SafeLoader)
 
-        # 3. Lookup people from uploaded file in Breeze
-        df_ppl_matched = match_people(df_uploaded_file, people)
-        print(df_ppl_matched)
+    authenticator = Authenticate(
+        config['credentials'],
+        config['cookie']['name'],
+        config['cookie']['key'],
+        config['cookie']['expiry_days'],
+        config['preauthorized'])
     
-        # 4. Merge the matched people from the spreadsheet back into the master spreadsheet
-        if df_uploaded_file is None:
-            print("Please upload your file.")
-            return
-        merged_df = merge_spreasheet(df_uploaded_file, df_ppl_matched)
-        print(merged_df)
+    name, authentication_status, username = authenticator.login('main')
 
-        # # 5. Get the list of all funds in the Breeze database
-        # df_breeze_funds = funds.get_funds()
-        # print(df_breeze_funds)
+    if st.session_state["authentication_status"]:
+        authenticator.logout('Logout','main')
 
-        # 5. Load the contributions into Breeze
-        df_auto_contr_recs = merged_df.loc[(merged_df['Manually Enter'] == 'N')]
-        print(df_auto_contr_recs)
-        st.warning("Please review the contributions to be loaded. If you need to manually enter any contributions, please do so in the spreadsheet and re-upload.")
-        if df_auto_contr_recs is not None and st.button("Load Contributions"):
-            with st.spinner("loading contributions"):
-                df_payment_id = load_contributions(breeze_api, df_auto_contr_recs)
-            print(df_payment_id)
-            st.write(df_payment_id)
-            st.success("Contributions loaded successfully")
+        breeze_api = connect_to_breeze()
+        tab1, tab2 = st.tabs(["ACH Loader", "tab 2"])
+        with tab1:
+            st.title('Breeze Automated ACH Contribution Loader')
+            st.write("""The ACH Loader loads contributions from an spreadhseet into Breeze by searching on the 
+                    Beneficiary Name and matching it with the Breeze database. 
+                    If a match is found, the contribution is loaded automatically. 
+                    If no match is found, the contribution is flagged for manual entry.""")
+            # 1. Get the list of all people in the Breeze database
+            people = get_people(breeze_api)
+            print(people)
+
+            # 2. Get spreadheet of contributions to be loaded
+            df_uploaded_file = get_upload_file()
+            print(df_uploaded_file)
+
+            # 3. Lookup people from uploaded file in Breeze
+            df_ppl_matched = match_people(df_uploaded_file, people)
+            print(df_ppl_matched)
+        
+            # 4. Merge the matched people from the spreadsheet back into the master spreadsheet
+            if df_uploaded_file is None:
+                print("Please upload your file.")
+                return
+            merged_df = merge_spreasheet(df_uploaded_file, df_ppl_matched)
+            print(merged_df)
+
+            # # 5. Get the list of all funds in the Breeze database
+            # df_breeze_funds = funds.get_funds()
+            # print(df_breeze_funds)
+
+            # 5. Load the contributions into Breeze
+            df_auto_contr_recs = merged_df.loc[(merged_df['Manually Enter'] == 'N')]
+            print(df_auto_contr_recs)
+            st.warning("Please review the contributions to be loaded. If you need to manually enter any contributions, please do so in the spreadsheet and re-upload.")
+            if df_auto_contr_recs is not None and st.button("Load Contributions"):
+                with st.spinner("loading contributions"):
+                    df_payment_id = load_contributions(breeze_api, df_auto_contr_recs)
+                print(df_payment_id)
+                st.write(df_payment_id)
+                st.success("Contributions loaded successfully")
+
+    elif st.session_state["authentication_status"] == False:
+        st.error('Username/password is incorrect')
+    elif st.session_state["authentication_status"] == None:
+        st.warning('Please enter your username and password')
+
+
+
+
+    # breeze_api = connect_to_breeze()
+    # st.title('Breeze Automated Contribution Loader - ACH')
+    # tab1, tab2 = st.tabs(["ACH Loader", "tab 2"])
+    # with tab1:
+    #     st.write("""The ACH Loader loads contributions from an spreadhseet into Breeze by searching on the 
+    #              Beneficiary Name and matching it with the Breeze database. 
+    #              If a match is found, the contribution is loaded automatically. 
+    #              If no match is found, the contribution is flagged for manual entry.""")
+    #     # 1. Get the list of all people in the Breeze database
+    #     people = get_people(breeze_api)
+    #     print(people)
+
+    #     # 2. Get spreadheet of contributions to be loaded
+    #     df_uploaded_file = get_upload_file()
+    #     print(df_uploaded_file)
+
+    #     # 3. Lookup people from uploaded file in Breeze
+    #     df_ppl_matched = match_people(df_uploaded_file, people)
+    #     print(df_ppl_matched)
+    
+    #     # 4. Merge the matched people from the spreadsheet back into the master spreadsheet
+    #     if df_uploaded_file is None:
+    #         print("Please upload your file.")
+    #         return
+    #     merged_df = merge_spreasheet(df_uploaded_file, df_ppl_matched)
+    #     print(merged_df)
+
+    #     # # 5. Get the list of all funds in the Breeze database
+    #     # df_breeze_funds = funds.get_funds()
+    #     # print(df_breeze_funds)
+
+    #     # 5. Load the contributions into Breeze
+    #     df_auto_contr_recs = merged_df.loc[(merged_df['Manually Enter'] == 'N')]
+    #     print(df_auto_contr_recs)
+    #     st.warning("Please review the contributions to be loaded. If you need to manually enter any contributions, please do so in the spreadsheet and re-upload.")
+    #     if df_auto_contr_recs is not None and st.button("Load Contributions"):
+    #         with st.spinner("loading contributions"):
+    #             df_payment_id = load_contributions(breeze_api, df_auto_contr_recs)
+    #         print(df_payment_id)
+    #         st.write(df_payment_id)
+    #         st.success("Contributions loaded successfully")
 
 
 
