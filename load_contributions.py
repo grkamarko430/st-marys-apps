@@ -51,17 +51,9 @@ def load_contributions(breeze_api, df_contribution_recs):
             batch_number=None,
             batch_name=None
         )
-        st.write(payment_id)
+        #st.write(payment_id)
         print(payment_id)
 
        #payment_id = breeze_api.add_contribution(data)
         df_contribution_recs.loc[index, 'Payment ID'] = payment_id
     return df_contribution_recs
-
-        
-
-
-        #print(row['First_Name'], row['Last_Name'], row['Amount'], row['Date'],
-    # for item in get_funds:
-    #     if 'AD Book ' in item['name']:
-    #         print(f"ID: {item['id']}, Name: {item['name']}")
