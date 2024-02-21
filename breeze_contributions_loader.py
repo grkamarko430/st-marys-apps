@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 from api_client import connect_to_breeze
+from funds_util import check_funds
 from load_contributions import load_contributions
 import streamlit as st
 import streamlit_authenticator as stauth
@@ -53,7 +54,7 @@ def match_people(df_uploaded_file, people):
                 results_df = pd.concat([results_df, lookup_result])
         results_df = results_df.drop_duplicates()
         if not results_df.empty:
-            st.write('Matched Parishioners:  Found ' + str(results_df['id'].count()) + ' matches out of ' + str(df_uploaded_file['First_Name'].count()) + ' records')
+            st.write('Found ' + str(results_df['id'].count()) + ' out of ' + str(df_uploaded_file['First_Name'].count()) + ' parishioners from the spreadsheet that matched in Breeze.')
             #st.dataframe(data=results_df.drop(columns=['path','force_first_name']), use_container_width=True)
             print("Found matches:")
             print(results_df)
@@ -76,7 +77,7 @@ def merge_spreasheet(df_uploaded_file, df_ppl_matched):
 
 def main():
     
-    # Login Authentication
+    # 0. Login Authentication
     hashed_passwords = stauth.Hasher(['abc', 'def']).generate()
     with open('config.yaml') as file:
         config = yaml.load(file, Loader=SafeLoader)
@@ -108,6 +109,7 @@ def main():
             print(df_uploaded_file)
 
             # 3. Lookup people from uploaded file in Breeze
+            st.header(body='Match Parishioners',divider='grey')
             df_ppl_matched = match_people(df_uploaded_file, people)
             print(df_ppl_matched)
         
@@ -118,15 +120,28 @@ def main():
             merged_df = merge_spreasheet(df_uploaded_file, df_ppl_matched)
             print(merged_df)
 
-            # # 5. Get the list of all funds in the Breeze database
-            # df_breeze_funds = funds.get_funds()
-            # print(df_breeze_funds)
-
-            # 5. Load the contributions into Breeze
+            # 5. Perform check to make sure that all funds on spreasheet exist in Breeze
+            st.header(body='Check Funds',divider='grey')
             df_auto_contr_recs = merged_df.loc[(merged_df['Manually Enter'] == 'N')]
             df_manual_contr_recs = merged_df.loc[(merged_df['Manually Enter'] == 'Y')]
+            df_check_funds = check_funds(df_auto_contr_recs)
+            #st.write(df_check_funds)
+            if df_check_funds['Fund Exists'].str.contains('N').any():
+                st.error("ERROR: The following funds do not exist in Breeze. Please manually change the names in the 'Fund' column to match those in Breeze and re-upload the spreadsheet.")
+                st.table(df_check_funds.loc[(df_check_funds['Fund Exists'] == 'N')])
+                funds_exist = False
+            else:
+                st.success("All funds exist in Breeze")
+                funds_exist = True
+            # If funds_exist is False, stop the execution of the rest of the code
+            if not funds_exist:
+                st.stop()
+
+            # 6. Load the contributions into Breeze
             print(df_auto_contr_recs)
+            st.header(body='Load Contributions',divider='grey')
             st.warning("Please review the contributions to be loaded. If you need to manually enter or change any contribution details, please do so in the spreadsheet file and re-upload.")
+            st.write(df_auto_contr_recs)
             if df_auto_contr_recs is not None and st.button("Load Contributions"):
                 with st.spinner("Loading contributions..."):
                     df_payment_id = load_contributions(breeze_api, df_auto_contr_recs)
@@ -136,7 +151,6 @@ def main():
                 st.write(df_payment_id)
                 st.write("Unmatched records that require manual entry:")
                 st.write(df_manual_contr_recs)
-                
 
     elif st.session_state["authentication_status"] == False:
         st.error('Username/password is incorrect')

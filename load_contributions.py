@@ -1,29 +1,11 @@
-from funds import get_funds
-import streamlit as st
-from breeze_chms_api import breeze
-
-
-
-def get_fund_id(fund_name):
-    try:
-        for item in get_funds():
-            if fund_name in item['name']:
-                return item['id']
-    except Exception as e:
-        st.error(f'Error: {e}')
-
-def get_fund_name(fund_name):
-    try:
-        for item in get_funds():
-            if fund_name in item['name']:
-                return item['name']
-    except Exception as e:
-        st.error(f'Error: {e}')
+from funds_util import get_fund_id, get_fund_name
 
 def load_contributions(breeze_api, df_contribution_recs):
     print("loading contributions")
     print(df_contribution_recs)
     df_contribution_recs['Payment ID'] = None
+    
+    # Set values for each conribution record
     for index, row in df_contribution_recs.iterrows():
         print(row['Date'])
         date = row['Date']
@@ -33,6 +15,7 @@ def load_contributions(breeze_api, df_contribution_recs):
         fund_name = get_fund_name(row['Fund'])
         amount = row['Amount']
 
+        # Call API to add contribution
         payment_id = breeze_api.add_contribution(
             date=date,
             name=name,
@@ -51,9 +34,8 @@ def load_contributions(breeze_api, df_contribution_recs):
             batch_number=None,
             batch_name=None
         )
-        #st.write(payment_id)
         print(payment_id)
 
-       #payment_id = breeze_api.add_contribution(data)
+        # Add payment_id to the contribution record
         df_contribution_recs.loc[index, 'Payment ID'] = payment_id
     return df_contribution_recs
