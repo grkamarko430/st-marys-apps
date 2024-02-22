@@ -144,14 +144,15 @@ def main():
             st.warning("Please review the contributions to be loaded. If you need to manually enter or change any contribution details, please do so in the spreadsheet file and re-upload.")
             st.write("Contributions to be loaded:")
             st.write(df_auto_contr_recs)
-            if 'load_contributions' not in st.session_state:
-                st.session_state.load_contributions = False
+
+            #if 'load_contributions' not in st.session_state:
+            st.session_state.load_contributions = False
             if st.button("Load Contributions"):
                 st.session_state.load_contributions = True
             if df_auto_contr_recs is not None and st.session_state.load_contributions:
                 with st.spinner("Loading contributions..."):
                     df_payment_id = load_contributions(breeze_api, df_auto_contr_recs)
-                
+
                 # 7. Display the results
                 st.success("Contributions loaded successfully")
                 st.subheader(body='Results',divider='blue')
@@ -160,8 +161,8 @@ def main():
                 st.info("Unmatched contribution records that require manual entry:", icon="❗️")
                 st.caption(":red[Action Required!]")
                 st.write(df_manual_contr_recs)
-                merged_df.to_excel("merged_df.xlsx", index=False)
-                with open("merged_df.xlsx", "rb") as f:
+                merged_df.to_excel("/tmp/merged_df.xlsx", index=False)
+                with open("/tmp/merged_df.xlsx", "rb") as f:
                     all_contr_data = f.read()
                 st.download_button(
                     label="Download All Contributions Spreadsheet",
@@ -169,8 +170,8 @@ def main():
                     file_name='all_contributions.xlsx',
                     mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 )
-                df_manual_contr_recs.to_excel("df_manual_contr_recs.xlsx", index=False)
-                with open("df_manual_contr_recs.xlsx", "rb") as f:
+                df_manual_contr_recs.to_excel("/tmp/df_manual_contr_recs.xlsx", index=False)
+                with open("/tmp/df_manual_contr_recs.xlsx", "rb") as f:
                     unmatched_contr_data = f.read()
                 st.download_button(
                     label="Download Unmatched Contributions Spreadsheet",
