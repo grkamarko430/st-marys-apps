@@ -145,8 +145,8 @@ def main():
             st.write("Contributions to be loaded:")
             st.write(df_auto_contr_recs)
 
-            #if 'load_contributions' not in st.session_state:
-            st.session_state.load_contributions = False
+            if 'load_contributions' not in st.session_state:
+                st.session_state.load_contributions = False
             if st.button("Load Contributions"):
                 st.session_state.load_contributions = True
             if df_auto_contr_recs is not None and st.session_state.load_contributions:
@@ -161,6 +161,7 @@ def main():
                 st.info("Unmatched contribution records that require manual entry:", icon="❗️")
                 st.caption(":red[Action Required!]")
                 st.write(df_manual_contr_recs)
+
                 merged_df.to_excel("/tmp/merged_df.xlsx", index=False)
                 with open("/tmp/merged_df.xlsx", "rb") as f:
                     all_contr_data = f.read()
@@ -179,7 +180,13 @@ def main():
                     file_name='unmatched_contributions.xlsx',
                     mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 )
-                st.caption("To load more contributions, please select another file at the top of the page.")
+                st.caption("To load more contributions, please click the button below twice and select another file at the top of the page.")
+
+                if st.button('Clear session state'):
+                    keys = list(st.session_state.keys())
+                    for key in keys:
+                        if key != 'authentication_status':
+                            del st.session_state[key]
 
     elif st.session_state["authentication_status"] == False:
         st.error('Username/password is incorrect')
