@@ -1,8 +1,8 @@
 import os
 from dotenv import load_dotenv
-from api_client import connect_to_breeze
-from funds_util import check_funds
-from load_contributions import load_contributions
+from utils.api_util import connect_to_breeze
+from utils.funds_util import check_funds
+from utils.load_contr_util import load_contributions
 import streamlit as st
 import streamlit_authenticator as stauth
 import pandas as pd
@@ -17,9 +17,9 @@ def get_people(breeze_api):
     return df_ppl
 
 def get_upload_file():
-    st.header(body='Upload an .xlsx file',divider=True) 
-    uploaded_file = st.file_uploader("Upload a .xlsx file", type=['xlsx'])
-    # Check if a file has been uploaded
+    st.subheader(body='Upload an .xlsx file',divider='blue') 
+    uploaded_file = st.file_uploader("""Please make sure the file uses the correct format, i.e.  
+                                     Date | Beneficiary Name | Amount | Fund | Method""", type=['xlsx'])
     # Check if a file has been uploaded
     if uploaded_file is not None:
         # Display some details about the uploaded file
@@ -31,12 +31,12 @@ def get_upload_file():
             df = pd.read_excel(uploaded_file)
             st.write('Original Data:')
             st.dataframe(data=df, use_container_width=True)
-            ACH_data = df
+            contr_data = df
             # Split the Beneficiary Name into First and Last Name
-            ACH_data['Beneficiary Name'] = ACH_data['Beneficiary Name'].astype(str)
-            ACH_data['First_Name'] = ACH_data['Beneficiary Name'].str.split().str[0]
-            ACH_data['Last_Name'] = ACH_data['Beneficiary Name'].str.split().str[1]
-            return ACH_data
+            contr_data['Beneficiary Name'] = contr_data['Beneficiary Name'].astype(str)
+            contr_data['First_Name'] = contr_data['Beneficiary Name'].str.split().str[0]
+            contr_data['Last_Name'] = contr_data['Beneficiary Name'].str.split().str[1]
+            return contr_data
         except Exception as e:
             st.error(f'Error: {e}')
     return None
@@ -106,10 +106,11 @@ def main():
 
             # 2. Get spreadheet of contributions to be loaded
             df_uploaded_file = get_upload_file()
+            
             print(df_uploaded_file)
 
             # 3. Lookup people from uploaded file in Breeze
-            st.header(body='Match Parishioners',divider='grey')
+            st.subheader(body='Match Parishioners',divider='blue')
             df_ppl_matched = match_people(df_uploaded_file, people)
             print(df_ppl_matched)
         
@@ -121,7 +122,7 @@ def main():
             print(merged_df)
 
             # 5. Perform check to make sure that all funds on spreasheet exist in Breeze
-            st.header(body='Check Funds',divider='grey')
+            st.subheader(body='Check Funds',divider='blue')
             df_auto_contr_recs = merged_df.loc[(merged_df['Manually Enter'] == 'N')]
             df_manual_contr_recs = merged_df.loc[(merged_df['Manually Enter'] == 'Y')]
             df_check_funds = check_funds(df_auto_contr_recs)
@@ -131,7 +132,7 @@ def main():
                 st.table(df_check_funds.loc[(df_check_funds['Fund Exists'] == 'N')])
                 funds_exist = False
             else:
-                st.success("All funds exist in Breeze")
+                st.success("All funds in the spreadsheet exist in Breeze")
                 funds_exist = True
             # If funds_exist is False, stop the execution of the rest of the code
             if not funds_exist:
@@ -139,18 +140,45 @@ def main():
 
             # 6. Load the contributions into Breeze
             print(df_auto_contr_recs)
-            st.header(body='Load Contributions',divider='grey')
+            st.subheader(body='Load Contributions',divider='grey')
             st.warning("Please review the contributions to be loaded. If you need to manually enter or change any contribution details, please do so in the spreadsheet file and re-upload.")
+            st.write("Contributions to be loaded:")
             st.write(df_auto_contr_recs)
-            if df_auto_contr_recs is not None and st.button("Load Contributions"):
+            if 'load_contributions' not in st.session_state:
+                st.session_state.load_contributions = False
+            if st.button("Load Contributions"):
+                st.session_state.load_contributions = True
+            if df_auto_contr_recs is not None and st.session_state.load_contributions:
                 with st.spinner("Loading contributions..."):
                     df_payment_id = load_contributions(breeze_api, df_auto_contr_recs)
-                print(df_payment_id)
+                
+                # 7. Display the results
                 st.success("Contributions loaded successfully")
-                st.write("Records loaded successfully:")
+                st.subheader(body='Results',divider='blue')
+                st.info("Contribution records loaded successfully:")
                 st.write(df_payment_id)
-                st.write("Unmatched records that require manual entry:")
+                st.info("Unmatched contribution records that require manual entry:", icon="❗️")
+                st.caption(":red[Action Required!]")
                 st.write(df_manual_contr_recs)
+                merged_df.to_excel("merged_df.xlsx", index=False)
+                with open("merged_df.xlsx", "rb") as f:
+                    all_contr_data = f.read()
+                st.download_button(
+                    label="Download All Contributions Spreadsheet",
+                    data=all_contr_data,
+                    file_name='all_contributions.xlsx',
+                    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                )
+                df_manual_contr_recs.to_excel("df_manual_contr_recs.xlsx", index=False)
+                with open("df_manual_contr_recs.xlsx", "rb") as f:
+                    unmatched_contr_data = f.read()
+                st.download_button(
+                    label="Download Unmatched Contributions Spreadsheet",
+                    data=unmatched_contr_data,
+                    file_name='unmatched_contributions.xlsx',
+                    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                )
+                st.caption("To load more contributions, please select another file at the top of the page.")
 
     elif st.session_state["authentication_status"] == False:
         st.error('Username/password is incorrect')

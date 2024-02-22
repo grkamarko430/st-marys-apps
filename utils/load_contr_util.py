@@ -1,4 +1,4 @@
-from funds_util import get_fund_id, get_fund_name
+from utils.funds_util import get_fund_id, get_fund_name
 
 def load_contributions(breeze_api, df_contribution_recs):
     print("loading contributions")
@@ -11,6 +11,7 @@ def load_contributions(breeze_api, df_contribution_recs):
         date = row['Date']
         name = row['Beneficiary Name']
         uid = row['id']
+        method = row['Method']
         fund_id = get_fund_id(row['Fund'])
         fund_name = get_fund_name(row['Fund'])
         amount = row['Amount']
@@ -21,7 +22,7 @@ def load_contributions(breeze_api, df_contribution_recs):
             name=name,
             processor=None,
             person_id=uid,
-            method='Direct Deposit',
+            method=method,
             funds_json=[
                 {
                     'id': fund_id,
