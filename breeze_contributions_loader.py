@@ -1,8 +1,9 @@
 import os
 from dotenv import load_dotenv
 from utils.api_util import connect_to_breeze
-from utils.funds_util import check_funds
+from utils.funds_util import check_funds, get_all_fund_names
 from utils.load_contr_util import load_contributions
+from utils.ppl_util import get_people, match_people
 import streamlit as st
 import streamlit_authenticator as stauth
 import pandas as pd
@@ -10,11 +11,6 @@ import yaml
 from yaml.loader import SafeLoader
 from streamlit_authenticator import Authenticate
 
-def get_people(breeze_api):
-    # Get List of all Breeze Users   
-    people = breeze_api.list_people()
-    df_ppl = pd.DataFrame(people)
-    return df_ppl
 
 def get_upload_file():
     st.subheader(body='Upload an .xlsx file',divider='blue') 
@@ -41,42 +37,24 @@ def get_upload_file():
             st.error(f'Error: {e}')
     return None
 
-def match_people(df_uploaded_file, people):
-    results_df = pd.DataFrame()
-    if df_uploaded_file is not None:
-        for index, row in df_uploaded_file.iterrows():
-            # Match the first and last name of people from the spreadhsheet with the Breeze database
-            lookup_result = people.loc[(people['first_name'] == row['First_Name']) &
-                                    (people['last_name'] == row['Last_Name'])]
-            # add the ID number to the lookup result (if any)
-            if not lookup_result.empty:
-                lookup_result.loc[:, 'id'] = lookup_result['id']
-                results_df = pd.concat([results_df, lookup_result])
-        results_df = results_df.drop_duplicates()
-        if not results_df.empty:
-            st.write('Found ' + str(results_df['id'].count()) + ' out of ' + str(df_uploaded_file['First_Name'].count()) + ' parishioners from the spreadsheet that matched in Breeze.')
-            #st.dataframe(data=results_df.drop(columns=['path','force_first_name']), use_container_width=True)
-            print("Found matches:")
-            print(results_df)
-            return results_df
-        else:
-            print("No matches found")
-            return None
-
 def merge_spreasheet(df_uploaded_file, df_ppl_matched):
-    merged_df = df_uploaded_file.merge(df_ppl_matched,how='left',left_on=['First_Name','Last_Name'],right_on=['first_name','last_name'])
-    # Set the 'Manually Enter' column to 'Y' if the ID is null, otherwise 'N'
-    merged_df['Manually Enter'] = merged_df.apply(lambda row: 'Y' if pd.isna(row['id']) else 'N', axis=1)
-    merged_df = merged_df.drop(columns=['first_name','last_name','force_first_name','path'])
-    merged_df['Date'] = pd.to_datetime(merged_df['Date']).dt.strftime('%Y-%m-%d')
-    merged_df['Amount'] = merged_df['Amount'].astype(float).round(2)
-    merged_df['Amount'] = merged_df['Amount'].map('{:.2f}'.format)
-    #st.write('Merged Data:')
-    st.dataframe(data=merged_df.loc[(merged_df['Manually Enter'] == 'N')], use_container_width=True)
-    return merged_df
+    if df_ppl_matched:
+        merged_df = df_uploaded_file.merge(df_ppl_matched,how='left',left_on='Beneficiary Name',right_on='Beneficiary Name')
+        # Set the 'Manually Enter' column to 'Y' if the ID is null, otherwise 'N'
+        merged_df['Manually Enter'] = merged_df.apply(lambda row: 'Y' if pd.isna(row['id']) else 'N', axis=1)
+        #merged_df = merged_df.drop(columns=['first_name','last_name','force_first_name','path'])
+        merged_df = merged_df.drop(columns=['force_first_name','path'])
+        merged_df['Date'] = pd.to_datetime(merged_df['Date']).dt.strftime('%Y-%m-%d')
+        merged_df['Amount'] = merged_df['Amount'].astype(float).round(2)
+        merged_df['Amount'] = merged_df['Amount'].map('{:.2f}'.format)
+        #st.write('Merged Data:')
+        #st.dataframe(data=merged_df.loc[(merged_df['Manually Enter'] == 'N')], use_container_width=True)
+        return merged_df
+    else:
+        st.error("No records matched. Please check the Beneficiary Names in the spreadsheet and try again.")
+        st.stop()
 
 def main():
-    
     # 0. Login Authentication
     hashed_passwords = stauth.Hasher(['abc', 'def']).generate()
     with open('config.yaml') as file:
@@ -103,6 +81,8 @@ def main():
             # 1. Get the list of all people in the Breeze database
             people = get_people(breeze_api)
             print(people)
+            #st.write('People in Breeze:')
+            #st.dataframe(data=people, use_container_width=True)
 
             # 2. Get spreadheet of contributions to be loaded
             df_uploaded_file = get_upload_file()
@@ -130,6 +110,8 @@ def main():
             if df_check_funds['Fund Exists'].str.contains('N').any():
                 st.error("ERROR: The following funds do not exist in Breeze. Please manually change the names in the 'Fund' column to match those in Breeze and re-upload the spreadsheet.")
                 st.table(df_check_funds.loc[(df_check_funds['Fund Exists'] == 'N')])
+                st.write("Available funds in Breeze:")
+                st.write(get_all_fund_names())
                 funds_exist = False
             else:
                 st.success("All funds in the spreadsheet exist in Breeze")
