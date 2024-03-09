@@ -1,5 +1,3 @@
-import os
-from dotenv import load_dotenv
 from utils.api_util import connect_to_breeze
 from utils.funds_util import check_funds, get_all_fund_names
 from utils.load_contr_util import load_contributions
@@ -38,21 +36,18 @@ def get_upload_file():
     return None
 
 def merge_spreasheet(df_uploaded_file, df_ppl_matched):
-    if df_ppl_matched:
-        merged_df = df_uploaded_file.merge(df_ppl_matched,how='left',left_on='Beneficiary Name',right_on='Beneficiary Name')
-        # Set the 'Manually Enter' column to 'Y' if the ID is null, otherwise 'N'
-        merged_df['Manually Enter'] = merged_df.apply(lambda row: 'Y' if pd.isna(row['id']) else 'N', axis=1)
-        #merged_df = merged_df.drop(columns=['first_name','last_name','force_first_name','path'])
-        merged_df = merged_df.drop(columns=['force_first_name','path'])
-        merged_df['Date'] = pd.to_datetime(merged_df['Date']).dt.strftime('%Y-%m-%d')
-        merged_df['Amount'] = merged_df['Amount'].astype(float).round(2)
-        merged_df['Amount'] = merged_df['Amount'].map('{:.2f}'.format)
-        #st.write('Merged Data:')
-        #st.dataframe(data=merged_df.loc[(merged_df['Manually Enter'] == 'N')], use_container_width=True)
-        return merged_df
-    else:
-        st.error("No records matched. Please check the Beneficiary Names in the spreadsheet and try again.")
-        st.stop()
+    merged_df = df_uploaded_file.merge(df_ppl_matched,how='left',left_on='Beneficiary Name',right_on='Beneficiary Name')
+    # Set the 'Manually Enter' column to 'Y' if the ID is null, otherwise 'N'
+    merged_df['Manually Enter'] = merged_df.apply(lambda row: 'Y' if pd.isna(row['id']) else 'N', axis=1)
+    #merged_df = merged_df.drop(columns=['first_name','last_name','force_first_name','path'])
+    merged_df = merged_df.drop(columns=['force_first_name','path'])
+    merged_df['Date'] = pd.to_datetime(merged_df['Date']).dt.strftime('%Y-%m-%d')
+    merged_df['Amount'] = merged_df['Amount'].astype(float).round(2)
+    merged_df['Amount'] = merged_df['Amount'].map('{:.2f}'.format)
+    #st.write('Merged Data:')
+    #st.dataframe(data=merged_df.loc[(merged_df['Manually Enter'] == 'N')], use_container_width=True)
+    return merged_df
+
 
 def main():
     # 0. Login Authentication
@@ -90,16 +85,20 @@ def main():
             print(df_uploaded_file)
 
             # 3. Lookup people from uploaded file in Breeze
-            st.subheader(body='Match Parishioners',divider='blue')
             df_ppl_matched = match_people(df_uploaded_file, people)
             print(df_ppl_matched)
         
             # 4. Merge the matched people from the spreadsheet back into the master spreadsheet
             if df_uploaded_file is None:
-                print("Please upload your file.")
+                st.caption("Please upload your file...")
                 return
-            merged_df = merge_spreasheet(df_uploaded_file, df_ppl_matched)
-            print(merged_df)
+            
+            if df_ppl_matched is not None and not df_ppl_matched.empty and df_uploaded_file is not None and not df_uploaded_file.empty:
+                merged_df = merge_spreasheet(df_uploaded_file, df_ppl_matched)
+                print(merged_df)
+            else:
+                st.error("No records matched. Please check the Beneficiary Names in the spreadsheet and try again.")
+                st.stop()
 
             # 5. Perform check to make sure that all funds on spreasheet exist in Breeze
             st.subheader(body='Check Funds',divider='blue')
@@ -124,8 +123,8 @@ def main():
             print(df_auto_contr_recs)
             st.subheader(body='Load Contributions',divider='grey')
             st.warning("Please review the contributions to be loaded. If you need to manually enter or change any contribution details, please do so in the spreadsheet file and re-upload.")
-            st.write("Contributions to be loaded:")
-            st.write(df_auto_contr_recs)
+            st.write(f"Contributions to be loaded: {df_auto_contr_recs.count()[0]}")
+            st.write(df_auto_contr_recs.drop(columns=['First_Name','Last_Name']))
 
             if 'load_contributions' not in st.session_state:
                 st.session_state.load_contributions = False
@@ -144,6 +143,7 @@ def main():
                 st.caption(":red[Action Required!]")
                 st.write(df_manual_contr_recs)
 
+                # 8. Download the results
                 merged_df.to_excel("/tmp/merged_df.xlsx", index=False)
                 with open("/tmp/merged_df.xlsx", "rb") as f:
                     all_contr_data = f.read()
@@ -170,6 +170,7 @@ def main():
                         if key != 'authentication_status':
                             del st.session_state[key]
 
+    # Authentication notifications
     elif st.session_state["authentication_status"] == False:
         st.error('Username/password is incorrect')
     elif st.session_state["authentication_status"] == None:
