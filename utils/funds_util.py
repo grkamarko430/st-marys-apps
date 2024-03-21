@@ -33,4 +33,13 @@ def get_fund_name(fund_name):
                 return item['name']
     except Exception as e:
         st.error(f'Error: {e}')
+
+def get_all_fund_names():
+    try:
+        fund_names = []
+        for item in get_funds():
+            fund_names.append(item['name'])
+        return fund_names
+    except Exception as e:
+        st.error(f'Error: {e}')
            
