@@ -18,18 +18,22 @@ def check_similar_names(df):
         scores.sort(key=lambda x: x[1], reverse=True)
         #st.write(name)
         #st.write(scores)
-        if scores[0][1] > 80:  # if the best match has a score > 80
+        if scores and scores[0][1] > 80:  # if the best match has a score > 80
             similar_names.append(name)
     return similar_names
 
 
 def match_people(df_orig_uploaded_file, people):
+
     if df_orig_uploaded_file is None or df_orig_uploaded_file.empty:
         print("Please upload your file.")
+        return
+    
     else:
+        exclude_df = pd.DataFrame(columns=df_orig_uploaded_file.columns)
+        unmatched_df = pd.DataFrame(columns=df_orig_uploaded_file.columns)
         st.subheader(body='Match Parishioners',divider='blue')
         results_df = pd.DataFrame()
-        unmatched_df = pd.DataFrame()
         # Count distinct Beneficiary Names in the uploaded file
         distinct_bene_names = df_orig_uploaded_file['Beneficiary Name'].nunique()
 
@@ -38,6 +42,8 @@ def match_people(df_orig_uploaded_file, people):
         if similar_names:
             exclude_df = df_orig_uploaded_file[df_orig_uploaded_file['Beneficiary Name'].isin(similar_names)]
             df_uploaded_file = df_orig_uploaded_file[~df_orig_uploaded_file['Beneficiary Name'].isin(similar_names)]
+        else:
+            df_uploaded_file = df_orig_uploaded_file
 
         if df_uploaded_file is not None:
             for index, row in df_uploaded_file.iterrows():
