@@ -3,7 +3,7 @@ import datetime as dt
 import streamlit as st
 
 def generate_group_id() -> str:
-    return f'{dt.datetime.now().strftime("%Y%m%d%H%")}'
+    return f'{dt.datetime.now().strftime("%Y%m%d%H%M%")}'
 
 def load_contributions(breeze_api, df_contribution_recs):
     print("loading contributions")

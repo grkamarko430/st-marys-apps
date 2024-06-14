@@ -2,56 +2,12 @@ from utils.api_util import connect_to_breeze
 from utils.funds_util import check_funds, get_all_fund_names
 from utils.load_contr_util import load_contributions
 from utils.ppl_util import get_people, match_people
-from utils.spreadsheet_util import generate_template
+from utils.spreadsheet_util import generate_template, get_upload_file, merge_spreasheet
 import streamlit as st
 import streamlit_authenticator as stauth
-import pandas as pd
 import yaml
 from yaml.loader import SafeLoader
 from streamlit_authenticator import Authenticate
-
-
-def get_upload_file():
-    st.subheader(body='Upload an .xlsx file',divider='blue') 
-    uploaded_file = st.file_uploader("""Make sure your file is in the correct format by using the template in the sidebar.  
-                                     """, type=['xlsx'],
-                                     help="""Ex.)
-                                            \nDate | Contributor Name | Amount | Fund | Method
-                                           \n2023-01-01 | John Doe | 100.00 | General Fund | Cemetery""")
-
-    # Check if a file has been uploaded
-    if uploaded_file is not None:
-        # Display some details about the uploaded file
-        # st.write('File Details:')
-        # file_details = {'Filename': uploaded_file.name, 'FileType': uploaded_file.type, 'FileSize': uploaded_file.size}
-        # st.write(file_details)
-        try:
-            # Convert the uploaded file into a Pandas DataFrame
-            df = pd.read_excel(uploaded_file)
-            st.write('Original Data:')
-            st.dataframe(data=df, use_container_width=True)
-            contr_data = df
-            # Split the Contributor Name into First and Last Name
-            contr_data['Contributor Name'] = contr_data['Contributor Name'].astype(str)
-            contr_data['First_Name'] = contr_data['Contributor Name'].str.split().str[0]
-            contr_data['Last_Name'] = contr_data['Contributor Name'].str.split().str[1]
-            return contr_data
-        except Exception as e:
-            st.error(f'Error: {e}')
-    return None
-
-def merge_spreasheet(df_uploaded_file, df_ppl_matched):
-    merged_df = df_uploaded_file.merge(df_ppl_matched,how='left',left_on='Contributor Name',right_on='Contributor Name')
-    # Set the 'Manually Enter' column to 'Y' if the ID is null, otherwise 'N'
-    merged_df['Manually Enter'] = merged_df.apply(lambda row: 'Y' if pd.isna(row['id']) else 'N', axis=1)
-    #merged_df = merged_df.drop(columns=['first_name','last_name','force_first_name','path'])
-    #merged_df = merged_df.drop(columns=['force_first_name','path'])
-    merged_df['Date'] = pd.to_datetime(merged_df['Date']).dt.strftime('%Y-%m-%d')
-    merged_df['Amount'] = merged_df['Amount'].astype(float).round(2)
-    merged_df['Amount'] = merged_df['Amount'].map('{:.2f}'.format)
-    #st.write('Merged Data:')
-    #st.dataframe(data=merged_df.loc[(merged_df['Manually Enter'] == 'N')], use_container_width=True)
-    return merged_df
 
 
 def main():
@@ -185,12 +141,6 @@ def main():
                     mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 )
                 st.caption("To load more contributions, simply upload another Excel spreadsheet file.")
-
-                # if st.button('Clear session state'):
-                #     keys = list(st.session_state.keys())
-                #     for key in keys:
-                #         if key != 'authentication_status':
-                #             del st.session_state[key]
 
     # Authentication notifications
     elif st.session_state["authentication_status"] == False:
