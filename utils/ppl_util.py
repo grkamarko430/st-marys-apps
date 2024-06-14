@@ -7,11 +7,12 @@ def get_people(breeze_api):
     # Get List of all Breeze Users   
     people = breeze_api.list_people()
     df_ppl = pd.DataFrame(people)
+    df_ppl = df_ppl.drop(columns=['force_first_name','path'])
     return df_ppl
 
 
 def check_similar_names(df):
-    names = df['Beneficiary Name']
+    names = df['Contributor Name']
     similar_names = []
     for name in names:
         scores = [(other_name, fuzz.ratio(name, other_name)) for other_name in names if other_name != name]
@@ -34,14 +35,14 @@ def match_people(df_orig_uploaded_file, people):
         unmatched_df = pd.DataFrame(columns=df_orig_uploaded_file.columns)
         st.subheader(body='Match Parishioners',divider='blue')
         results_df = pd.DataFrame()
-        # Count distinct Beneficiary Names in the uploaded file
-        distinct_bene_names = df_orig_uploaded_file['Beneficiary Name'].nunique()
+        # Count distinct Contributor Names in the uploaded file
+        distinct_bene_names = df_orig_uploaded_file['Contributor Name'].nunique()
 
         # Check similar names and remove them from the dataframe
         similar_names = check_similar_names(df_orig_uploaded_file)
         if similar_names:
-            exclude_df = df_orig_uploaded_file[df_orig_uploaded_file['Beneficiary Name'].isin(similar_names)]
-            df_uploaded_file = df_orig_uploaded_file[~df_orig_uploaded_file['Beneficiary Name'].isin(similar_names)]
+            exclude_df = df_orig_uploaded_file[df_orig_uploaded_file['Contributor Name'].isin(similar_names)]
+            df_uploaded_file = df_orig_uploaded_file[~df_orig_uploaded_file['Contributor Name'].isin(similar_names)]
         else:
             df_uploaded_file = df_orig_uploaded_file
 
@@ -53,7 +54,7 @@ def match_people(df_orig_uploaded_file, people):
                                         (people['last_name'] == row['Last_Name'])]
                 if not lookup_result.empty:
                     lookup_result.loc[:, 'id'] = lookup_result['id']
-                    lookup_result.loc[:, 'Beneficiary Name'] = row['Beneficiary Name']  # Add 'Beneficiary Name' to lookup_result
+                    lookup_result.loc[:, 'Contributor Name'] = row['Contributor Name']  # Add 'Contributor Name' to lookup_result
                     results_df = pd.concat([results_df, lookup_result])
                 else:
                     unmatched_df = pd.concat([unmatched_df, pd.DataFrame(row).T])
@@ -67,8 +68,8 @@ def match_people(df_orig_uploaded_file, people):
                 questionable_matches = []
 
                 for i, person in people.iterrows():
-                    score = fuzz.partial_ratio(row['Beneficiary Name'], person['first_name'] + ' ' + person['last_name'])
-                    #score = fuzz.token_sort_ratio(row['Beneficiary Name'], person['first_name'] + ' ' + person['last_name'])
+                    score = fuzz.partial_ratio(row['Contributor Name'], person['first_name'] + ' ' + person['last_name'])
+                    #score = fuzz.token_sort_ratio(row['Contributor Name'], person['first_name'] + ' ' + person['last_name'])
                     if score > max_score:
                         max_score = score
                         best_match = person
@@ -80,11 +81,11 @@ def match_people(df_orig_uploaded_file, people):
                     print(max_score)
                     print(row)
                     lookup_result['id'] = lookup_result['id']
-                    lookup_result['Beneficiary Name'] = row['Beneficiary Name']
+                    lookup_result['Contributor Name'] = row['Contributor Name']
                     results_df = pd.concat([results_df, pd.DataFrame(lookup_result).T])
                     unmatched_records = unmatched_records.drop(index)  # remove matched record from unmatched_records
                 # elif questionable_matches:
-                #     st.warning(f"Questionable matches for {row['Beneficiary Name']}:")
+                #     st.warning(f"Questionable matches for {row['Contributor Name']}:")
                     # approved_matches = []
                     # for match, score in questionable_matches:
                     #     is_approved = st.checkbox(f"Is {match['first_name']} {match['last_name']} with score {score} the right person?", value=False)
@@ -98,7 +99,7 @@ def match_people(df_orig_uploaded_file, people):
             results_df = results_df.drop_duplicates()
 
         if not results_df.empty:
-            st.markdown(f"<div style='color: white; font-size:16px;'>Found <b>{str(results_df['id'].count())}</b> out of <b>{str(distinct_bene_names)}</b> parishioners from the spreadsheet that matched in Breeze.  <b>{str(unmatched_records['First_Name'].count())}</b> parishioners did not automatically match, and <b>{str(exclude_df['First_Name'].count())}</b> more were excluded from the matching process since the names were too similar.</div>", unsafe_allow_html=True)            
+            st.markdown(f"<div style='color: white; font-size:16px;'>Found <b>{str(results_df['id'].count())}</b> out of <b>{str(distinct_bene_names)}</b> parishioners from the spreadsheet that matched in Breeze.  <b>{str(unmatched_records['First_Name'].count())}</b> parishioner(s) did not automatically match, and <b>{str(exclude_df['First_Name'].count())}</b> were excluded from the matching process since the names were too similar.</div>", unsafe_allow_html=True)            
             st.write(results_df)
             if not exclude_df.empty:
                 st.write("Excluded records:")
