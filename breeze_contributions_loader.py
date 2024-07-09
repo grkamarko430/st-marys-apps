@@ -12,7 +12,7 @@ from streamlit_authenticator import Authenticate
 
 def main():
     # 0. Login Authentication
-    hashed_passwords = stauth.Hasher(['abc', 'def']).generate()
+    # hashed_passwords = stauth.Hasher(['abc', 'def']).generate()
     with open('config.yaml') as file:
         config = yaml.load(file, Loader=SafeLoader)
     authenticator = Authenticate(
