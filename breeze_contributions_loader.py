@@ -84,7 +84,7 @@ def main():
             #st.write(df_check_funds)
             if df_check_funds['Fund Exists'].str.contains('N').any():
                 st.error("ERROR: The following funds do not exist in Breeze. Please manually change the names in the 'Fund' column to match those in Breeze and re-upload the spreadsheet.")
-                st.table(df_check_funds.loc[(df_check_funds['Fund Exists'] == 'N')])
+                st.table(df_check_funds.loc[(df_check_funds['Fund Exists'] == 'N')].iloc[:, :5])
                 st.write("Available funds in Breeze:")
                 st.write(get_all_fund_names())
                 funds_exist = False
