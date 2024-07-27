@@ -111,9 +111,3 @@ def match_people(df_orig_uploaded_file, people):
         else:
             print("No matches found")
             return None
-
-
-
-
-
-            
