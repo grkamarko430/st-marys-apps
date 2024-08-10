@@ -6,9 +6,9 @@ def connect_to_breeze():
     load_dotenv('.env')
 
     breeze_url = os.getenv("BREEZE_URL")
-    print('BREEZE_URL: ', breeze_url)
+    # print('BREEZE_URL: ', breeze_url)
     api_key = os.getenv("BREEZE_API_KEY")
-    print('BREEZE_API_KEY: ', api_key)
+    # print('BREEZE_API_KEY: ', api_key)
 
     breeze_client = breeze.BreezeApi(
         breeze_url=breeze_url,
