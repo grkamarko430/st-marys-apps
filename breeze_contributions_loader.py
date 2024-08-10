@@ -26,7 +26,7 @@ def main():
     if st.session_state["authentication_status"]:
         authenticator.logout('Logout','main')
 
-        breeze_api = connect_to_breeze()
+        breeze_client = connect_to_breeze()
         tab1, tab2 = st.tabs(["Contribution Loader", "Documentation"])
         with tab1:
             st.title('Breeze Automated Contribution Loader')
@@ -37,7 +37,7 @@ def main():
 
 
             # Get the list of all people in the Breeze database and display it in the sidebar
-            people = get_people(breeze_api)
+            people = get_people(breeze_client)
             print(people)
 
             # Generate the template and display it in the sidebar
@@ -53,11 +53,10 @@ def main():
 
             # Display the list of people in the sidebar
             st.sidebar.subheader('Breeze Parishioner Directory')
-            st.sidebar.dataframe(data=get_people(breeze_api), use_container_width=True)
+            st.sidebar.dataframe(data=get_people(breeze_client), use_container_width=True)
 
             # Get spreadheet of contributions to be loaded
             df_uploaded_file = get_upload_file()
-            
             print(df_uploaded_file)
 
             # Lookup people from uploaded file in Breeze
@@ -80,13 +79,13 @@ def main():
             st.subheader(body='Check Funds',divider='blue')
             df_auto_contr_recs = merged_df.loc[(merged_df['Manually Enter'] == 'N')]
             df_manual_contr_recs = merged_df.loc[(merged_df['Manually Enter'] == 'Y')]
-            df_check_funds = check_funds(df_auto_contr_recs)
+            df_check_funds = check_funds(df_auto_contr_recs, breeze_client)
             #st.write(df_check_funds)
             if df_check_funds['Fund Exists'].str.contains('N').any():
                 st.error("ERROR: The following funds do not exist in Breeze. Please manually change the names in the 'Fund' column to match those in Breeze and re-upload the spreadsheet.")
                 st.table(df_check_funds.loc[(df_check_funds['Fund Exists'] == 'N')].iloc[:, :5])
                 st.write("Available funds in Breeze:")
-                st.write(get_all_fund_names())
+                st.write(get_all_fund_names(breeze_client))
                 funds_exist = False
             else:
                 st.success("All funds in the spreadsheet exist in Breeze")
@@ -108,7 +107,7 @@ def main():
                 st.session_state.load_contributions = True
             if df_auto_contr_recs is not None and st.session_state.load_contributions:
                 with st.spinner("Loading contributions..."):
-                    df_payment_id = load_contributions(breeze_api, df_auto_contr_recs)
+                    df_payment_id = load_contributions(breeze_client, df_auto_contr_recs)
                 # Reset the flag after loading the contributions
                 st.session_state.load_contributions = False
 
