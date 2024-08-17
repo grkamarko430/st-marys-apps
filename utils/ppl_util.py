@@ -3,9 +3,9 @@ from thefuzz import fuzz
 import streamlit as st
 
 
-def get_people(breeze_api):
+def get_people(breeze_client):
     # Get List of all Breeze Users   
-    people = breeze_api.list_people()
+    people = breeze_client.list_people()
     df_ppl = pd.DataFrame(people)
     df_ppl = df_ppl.drop(columns=['force_first_name','path'])
     return df_ppl

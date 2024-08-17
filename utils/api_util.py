@@ -4,10 +4,19 @@ from breeze_chms_api import breeze
 
 def connect_to_breeze():
     load_dotenv('.env')
-    api_key = os.getenv("API_KEY")
-    #print(api_key)  
-    breeze_api = breeze.BreezeApi(
-        breeze_url='https://stmary.breezechms.com',
-        api_key = os.getenv("API_KEY"))
-    return breeze_api
-    #print(breeze_api.list_people())
+
+    breeze_url = os.getenv("BREEZE_URL")
+    # print('BREEZE_URL: ', breeze_url)
+    api_key = os.getenv("BREEZE_API_KEY")
+    # print('BREEZE_API_KEY: ', api_key)
+
+    breeze_client = breeze.BreezeApi(
+        breeze_url=breeze_url,
+        api_key=api_key)
+
+    return breeze_client
+
+# test connection
+# breeze_client = connect_to_breeze()
+# funds = breeze_client.list_funds()
+# print(funds)
