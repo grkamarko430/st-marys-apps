@@ -5,3 +5,8 @@
 *.db
 *.sqlite
 *.pyc
+*.db-shm
+*.db-wal
+*.iml
+*.xml
+/.idea/
