@@ -74,7 +74,7 @@ class FestivalAnalyzer:
     @staticmethod
     def display_transactions_over_time(transactions_df):
         st.header('Transactions by Day and Hour of the Day')
-        transactions_df['Date'] = pd.to_datetime(transactions_df['Date'], infer_datetime_format=True)
+        transactions_df['Date'] = pd.to_datetime(transactions_df['Date'], dayfirst=False, errors='coerce')
         transactions_df['Time'] = pd.to_datetime(transactions_df['Time'], format='%H:%M:%S')
         transactions_df['Day'] = transactions_df['Date'].dt.day_name()
         transactions_df['Hour'] = transactions_df['Time'].dt.hour
@@ -86,8 +86,8 @@ class FestivalAnalyzer:
     @staticmethod
     def filter_dates(order_items_df, transactions_df):
         # Convert the 'Date' columns to datetime format
-        order_items_df['Date'] = pd.to_datetime(order_items_df['Date'], infer_datetime_format=True)
-        transactions_df['Date'] = pd.to_datetime(transactions_df['Date'], infer_datetime_format=True)
+        order_items_df['Date'] = pd.to_datetime(order_items_df['Date'], dayfirst=False, errors='coerce')
+        transactions_df['Date'] = pd.to_datetime(transactions_df['Date'], dayfirst=False, errors='coerce')
         # Fetch the minimum and maximum dates from the DataFrames
         min_date = min(order_items_df['Date'].min(), transactions_df['Date'].min())
         max_date = max(order_items_df['Date'].max(), transactions_df['Date'].max())
