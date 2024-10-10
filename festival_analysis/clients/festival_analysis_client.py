@@ -1,6 +1,13 @@
 import streamlit as st
 import pandas as pd
 from util.db_util import connect_turso_db
+# from dotenv import load_dotenv
+# from langchain import LLMChain
+# from langchain_groq import ChatGroq
+# from langchain.prompts import PromptTemplate
+# import os
+#
+# load_dotenv()
 
 
 class FestivalAnalyzer:
@@ -64,12 +71,11 @@ class FestivalAnalyzer:
         item_sales_pp['Day'] = item_sales_pp['Date'].dt.date
         item_sales_pp = item_sales_pp.sort_values(by=['Item', 'Day'])
 
-        for item in item_sales_pp['Item'].unique():
-            item_data = item_sales_pp[item_sales_pp['Item'] == item]
-            with st.expander(item):
-                st.dataframe(item_data, hide_index=True, use_container_width=True)
-                price_point_data = item_data[item_data['Qty'] > 0]
-                st.bar_chart(price_point_data.pivot(index='Day', columns='Price_Point_Name', values='Qty'), use_container_width=True)
+        selected_item = st.selectbox('Select an Item', item_sales_pp['Item'].unique())
+        item_data = item_sales_pp[item_sales_pp['Item'] == selected_item]
+        st.dataframe(item_data, hide_index=True, use_container_width=True)
+        price_point_data = item_data[item_data['Qty'] > 0]
+        st.bar_chart(price_point_data.pivot(index='Day', columns='Price_Point_Name', values='Qty'), use_container_width=True)
 
     @staticmethod
     def display_transactions_over_time(transactions_df):
@@ -104,7 +110,6 @@ class FestivalAnalyzer:
     @staticmethod
     def filter_items(order_items_df, transactions_df):
         items_to_exclude = st.sidebar.multiselect('Exclude Items', sorted(order_items_df['Item'].unique()))
-
         if items_to_exclude:
             order_items_df = order_items_df[~order_items_df['Item'].isin(items_to_exclude)]
             # Filter transactions based on the filtered order items
@@ -113,35 +118,54 @@ class FestivalAnalyzer:
         return order_items_df, transactions_df
 
     def execute(self):
-        st.title('Festival Analysis')
-        # Fetch data
-        order_items, order_items_columns = self.fetch_order_items()
-        transactions, transactions_columns = self.fetch_transactions()
+        tab1, tab2 = st.tabs(['Dashboard', 'Chat'])
 
-        # Convert to DataFrame
-        order_items_df = pd.DataFrame(order_items, columns=order_items_columns)
-        transactions_df = pd.DataFrame(transactions, columns=transactions_columns)
+        with tab1:
+            st.title('Festival Analysis Dashboard')
+            order_items, order_items_columns = self.fetch_order_items()
+            transactions, transactions_columns = self.fetch_transactions()
+            order_items_df = pd.DataFrame(order_items, columns=order_items_columns)
+            transactions_df = pd.DataFrame(transactions, columns=transactions_columns)
+            st.sidebar.title('Filters')
+            order_items_df, transactions_df = self.filter_dates(order_items_df, transactions_df)
+            order_items_df, transactions_df = self.filter_items(order_items_df, transactions_df)
+            self.display_metrics(transactions_df, order_items_df)
+            st.divider()
+            self.display_item_sales(order_items_df)
+            self.display_item_details(order_items_df)
+            self.display_transactions_over_time(transactions_df)
 
-        # Filter by date
-        st.sidebar.title('Filters')
-        order_items_df, transactions_df = self.filter_dates(order_items_df, transactions_df)
-
-        # Filter out items that are not in the transactions DataFrame
-        order_items_df, transactions_df = self.filter_items(order_items_df, transactions_df)
-
-        # Display Metrics
-        st.divider()
-        self.display_metrics(transactions_df, order_items_df)
-        st.divider()
-
-        # Display order items
-        self.display_item_sales(order_items_df)
-
-        # Display item details
-        self.display_item_details(order_items_df)
-
-        # Visualize transactions in a line graph by day and hour of the day
-        self.display_transactions_over_time(transactions_df)
-
-
-
+        with tab2:
+            st.title('Chat With Festival Data')
+    #         # if "GROQ_API_KEY" not in os.environ:
+    #         #     os.environ["GROQ_API_KEY"] = st.text_input("Enter your Groq API key: ")
+    #
+    #         if 'messages' not in st.session_state:
+    #             st.session_state.messages = []
+    #
+    #         user_input = st.text_input("You: ", key="input")
+    #         if user_input:
+    #             st.session_state.messages.append({"role": "user", "content": user_input})
+    #             response = self.handle_user_input(user_input, order_items_df, transactions_df)
+    #             st.session_state.messages.append({"role": "bot", "content": response})
+    #
+    #         for message in st.session_state.messages:
+    #             if message["role"] == "user":
+    #                 st.write(f"You: {message['content']}")
+    #             else:
+    #                 st.write(f"Bot: {message['content']}")
+    #
+    # def handle_user_input(self, user_input, order_items_df, transactions_df):
+    #     llm = ChatGroq(api_key=os.getenv("GROQ_API_KEY"),
+    #                    model="llama-3.1-70b-versatile",
+    #                    temperature=0,
+    #                    max_tokens=None,
+    #                    timeout=None,
+    #                    max_retries=2,)
+    #     prompt = PromptTemplate(
+    #         input_variables=["user_input", "order_items_df", "transactions_df"],
+    #         template="User asked: {user_input}\n\nOrder Items DataFrame: {order_items_df}\n\nTransactions DataFrame: {transactions_df}\n\nProvide a detailed response."
+    #     )
+    #     chain = LLMChain(llm=llm, prompt=prompt)
+    #     response = chain.run(user_input=user_input, order_items_df=order_items_df.to_string(), transactions_df=transactions_df.to_string())
+    #     return response
