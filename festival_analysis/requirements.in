@@ -1,0 +1,6 @@
+libsql_experimental==0.0.41
+pandas==2.2.3
+python-dotenv==1.0.1
+streamlit==1.37.1
+
+#pip-compile requirements.in
