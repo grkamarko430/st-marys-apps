@@ -9,4 +9,5 @@
 *.db-wal
 *.iml
 *.xml
+*.toml
 /.idea/
