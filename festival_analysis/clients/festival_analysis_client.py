@@ -1,14 +1,9 @@
 import streamlit as st
 import pandas as pd
 from util.db_util import connect_turso_db
-# from dotenv import load_dotenv
-# from langchain import LLMChain
-# from langchain_groq import ChatGroq
-# from langchain.prompts import PromptTemplate
-# import os
-#
-# load_dotenv()
-
+from pandasai import Agent, SmartDataframe
+from langchain_groq import ChatGroq
+import os
 
 class FestivalAnalyzer:
     def __init__(self):
@@ -136,36 +131,44 @@ class FestivalAnalyzer:
             self.display_transactions_over_time(transactions_df)
 
         with tab2:
-            st.title('Chat With Festival Data')
-    #         # if "GROQ_API_KEY" not in os.environ:
-    #         #     os.environ["GROQ_API_KEY"] = st.text_input("Enter your Groq API key: ")
-    #
-    #         if 'messages' not in st.session_state:
-    #             st.session_state.messages = []
-    #
-    #         user_input = st.text_input("You: ", key="input")
-    #         if user_input:
-    #             st.session_state.messages.append({"role": "user", "content": user_input})
-    #             response = self.handle_user_input(user_input, order_items_df, transactions_df)
-    #             st.session_state.messages.append({"role": "bot", "content": response})
-    #
-    #         for message in st.session_state.messages:
-    #             if message["role"] == "user":
-    #                 st.write(f"You: {message['content']}")
-    #             else:
-    #                 st.write(f"Bot: {message['content']}")
-    #
-    # def handle_user_input(self, user_input, order_items_df, transactions_df):
-    #     llm = ChatGroq(api_key=os.getenv("GROQ_API_KEY"),
-    #                    model="llama-3.1-70b-versatile",
-    #                    temperature=0,
-    #                    max_tokens=None,
-    #                    timeout=None,
-    #                    max_retries=2,)
-    #     prompt = PromptTemplate(
-    #         input_variables=["user_input", "order_items_df", "transactions_df"],
-    #         template="User asked: {user_input}\n\nOrder Items DataFrame: {order_items_df}\n\nTransactions DataFrame: {transactions_df}\n\nProvide a detailed response."
-    #     )
-    #     chain = LLMChain(llm=llm, prompt=prompt)
-    #     response = chain.run(user_input=user_input, order_items_df=order_items_df.to_string(), transactions_df=transactions_df.to_string())
-    #     return response
+            st.title('Chat With Festival Data (Beta)')
+            st.write('Chat with the Festival Data to get insights. Be sure to include years in your queries. '
+                     'Ask questions like "in 2024, how many grape leaves did we sell and what are the net sales?", "What were the top selling items in 2024?", '
+                     '"Which day did we sell the most hummus?" Also try making asking for charts like '
+                     '"Show me a bar chart of sales by item in 2024"')
+
+            if "GROQ_API_KEY" not in os.environ:
+                os.environ["GROQ_API_KEY"] = st.secrets["GROQ_API_KEY"]
+
+            if 'chat_history' not in st.session_state:
+                st.session_state.chat_history = []
+
+            llm = ChatGroq(model="llama-3.2-90b-text-preview", temperature=0.0, max_retries=2)
+            order_items_df_smrt = SmartDataframe(order_items_df, config={"llm": llm})
+            transactions_df_smrt = SmartDataframe(transactions_df, config={"llm": llm})
+            agent = Agent(order_items_df, config={"llm": llm})
+            # agent.train(docs=["you are the best data analyst ever", "You think critically and check your work several times to make sure it is correct. "])
+
+            if st.button("Clear Chat"):
+                st.session_state.chat_history = []
+
+            user_input = st.chat_input("Ask a question about the festival data:")
+            if user_input:
+                st.session_state.chat_history.append({"role": "user", "content": user_input})
+                response = agent.chat(user_input)
+                st.session_state.chat_history.append({"role": "assistant", "content": response})
+
+            for message in st.session_state.chat_history:
+                st.chat_message(message["role"]).write(message["content"])
+
+
+
+
+# Instantiate:
+# from langchain_groq import ChatGroq
+# llm = ChatGroq(    model="mixtral-8x7b-32768",    temperature=0.0,    max_retries=2,    # other params...)
+
+# Invoke:
+# messages = [    ("system", "You are a helpful translator. Translate the user    sentence to French."),    ("human", "I love programming."),]llm.invoke(messages)
+#
+# AIMessage(content='The English sentence "I love programming" canbe translated to French as "J'aime programmer". The word"programming" is translated as "programmer" in French.',response_metadata={'token_usage': {'completion_tokens': 38,'prompt_tokens': 28, 'total_tokens': 66, 'completion_time':0.057975474, 'prompt_time': 0.005366091, 'queue_time': None,'total_time': 0.063341565}, 'model_name': 'mixtral-8x7b-32768','system_fingerprint': 'fp_c5f20b5bb1', 'finish_reason': 'stop','logprobs': None}, id='run-ecc71d70-e10c-4b69-8b8c-b8027d95d4b8-0')
