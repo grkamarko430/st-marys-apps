@@ -148,7 +148,7 @@ class FestivalAnalyzer:
             llm = ChatGroq(model="llama-3.2-90b-text-preview", temperature=0.0, max_retries=2)
             order_items_df_smrt = SmartDataframe(order_items_df, config={"llm": llm})
             transactions_df_smrt = SmartDataframe(transactions_df, config={"llm": llm})
-            agent = Agent(order_items_df, config={"llm": llm})
+            agent = Agent([order_items_df,transactions_df], config={"llm": llm})
             # agent.train(docs=["you are the best data analyst ever", "You think critically and check your work several times to make sure it is correct. "])
 
             if st.button("Clear Chat"):
