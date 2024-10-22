@@ -17,11 +17,15 @@ def load_secrets():
             os.environ[key] = value
 
 def connect_turso_db():
-    load_secrets()
-
-    url = os.getenv("TURSO_DATABASE_URL")
-    auth_token = os.getenv("TURSO_AUTH_TOKEN")
-    db_directory = os.getenv("TURSO_DB_DIRECTORY", "default_db_directory")
+    if os.path.exists('.env'):
+        load_secrets()
+        url = os.getenv("TURSO_DATABASE_URL")
+        auth_token = os.getenv("TURSO_AUTH_TOKEN")
+        db_directory = os.getenv("TURSO_DB_DIRECTORY", "default_db_directory")
+    else:
+        url = st.secrets["TURSO_DATABASE_URL"]
+        auth_token = st.secrets["TURSO_AUTH_TOKEN"]
+        db_directory = st.secrets["TURSO_DB_DIRECTORY"]
 
     # Ensure the directory exists
     if not os.path.exists(db_directory):
