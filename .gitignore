@@ -10,4 +10,5 @@
 *.iml
 *.xml
 *.toml
+*.log
 /.idea/
