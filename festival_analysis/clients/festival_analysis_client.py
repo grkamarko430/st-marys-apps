@@ -139,6 +139,8 @@ class FestivalAnalyzer:
 
             if "GROQ_API_KEY" not in os.environ:
                 os.environ["GROQ_API_KEY"] = st.secrets["GROQ_API_KEY"]
+            if "PANDASAI_API_KEY" not in os.environ:
+                os.environ["PANDASAI_API_KEY"] = st.secrets["PANDASAI_API_KEY"]
 
             if 'chat_history' not in st.session_state:
                 st.session_state.chat_history = []
