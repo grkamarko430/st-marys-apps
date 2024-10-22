@@ -2,6 +2,7 @@ import os
 import toml
 import libsql_experimental as libsql
 from dotenv import load_dotenv
+import streamlit as st
 
 
 def load_secrets():
@@ -10,7 +11,8 @@ def load_secrets():
         load_dotenv()
     else:
         # Load from secrets.toml
-        config = toml.load('secrets.toml')
+        # config = toml.load('secrets.toml')
+        config = st.secrets['secrets.toml']
         for key, value in config.items():
             os.environ[key] = value
 
