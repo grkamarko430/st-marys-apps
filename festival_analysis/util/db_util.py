@@ -4,18 +4,18 @@ import libsql_experimental as libsql
 from dotenv import load_dotenv
 
 
-def load_environment():
+def load_secrets():
     # Check if .env file exists
     if os.path.exists('.env'):
         load_dotenv()
     else:
-        # Load from config.toml
-        config = toml.load('config.toml')
+        # Load from secrets.toml
+        config = toml.load('secrets.toml')
         for key, value in config.items():
             os.environ[key] = value
 
 def connect_turso_db():
-    load_environment()
+    load_secrets()
 
     url = os.getenv("TURSO_DATABASE_URL")
     auth_token = os.getenv("TURSO_AUTH_TOKEN")
