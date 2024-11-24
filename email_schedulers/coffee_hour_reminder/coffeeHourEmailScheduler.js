@@ -53,7 +53,7 @@ function sendNotificationEmail(family, eventDate, hostReminderDate, spreadsheetN
   var message = `Dear Secretary,<br><br>
   The following family/group is scheduled to host coffee hour on <b>${eventDate.toDateString()}</b> but we are missing their email addresses:<br>
   <b>${family}</b><br>
-  Please update the <b>${spreadsheetName}</b> Google Sheet with the correct email addresses before the reminder email sends at 5:00AM on <b>${hostReminderDate.toDateString()}</b>.
+  Please update the <b>${spreadsheetName}</b> Google Sheet with the correct email addresses before the reminder email sends at 5:00AM on <b>${hostReminderDate.toDateString()}</b>.<br>
   You can access the spreadsheet <a href="${spreadsheetUrl}">here</a>.<br><br>
   Thank you!
   This is an automated message. Please do not reply.`;
