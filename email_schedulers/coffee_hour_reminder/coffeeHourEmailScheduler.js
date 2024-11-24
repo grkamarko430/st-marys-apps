@@ -49,7 +49,7 @@ function getCoffeeHourInstructions() {
 function sendEmail(family, eventDate, emails) {
   var emailAddresses = formatEmailAddresses(emails); 
   var subject = "REMINDER - Coffee Hour Hosts " + eventDate.toDateString();
-  console.log(attachments)
+  console.log(ATTACHMENTS)
 
   var message_body = getCoffeeHourInstructions();
   var message = message_body.replace(/\n/g, '<br>');
