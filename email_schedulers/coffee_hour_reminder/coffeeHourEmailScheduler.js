@@ -51,8 +51,10 @@ function sendEmail(family, eventDate, emails) {
   var subject = "REMINDER - Coffee Hour Hosts " + eventDate.toDateString();
   console.log(ATTACHMENTS)
 
+  var message_head = `Dear ${family},<br><br>
+  You are scheduled to host coffee hour on <b>${eventDate.toDateString()}</b>. Please see instructions below for set up:<br><br>`;
   var message_body = getCoffeeHourInstructions();
-  var message = message_body.replace(/\n/g, '<br>');
+  var message = message_head + message_body.replace(/\n/g, '<br>');
   
   MailApp.sendEmail({
     to: emailAddresses, 
