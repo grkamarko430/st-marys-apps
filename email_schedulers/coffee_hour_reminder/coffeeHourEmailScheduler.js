@@ -50,7 +50,7 @@ function sendReminderEmails() {
 function sendNotificationEmail(family, eventDate, hostReminderDate, spreadsheetName, spreadsheetUrl) {
   var userEmail = Session.getActiveUser().getEmail();
   var subject = "Missing Coffee Hour Host Emails " + eventDate.toDateString();
-  var message = `Dear Secretary,<br>
+  var message = `Dear Secretary,<br><br>
   The following family/group is scheduled to host coffee hour on <b>${eventDate.toDateString()}</b> but we are missing their email addresses:<br>
   <b>${family}</b><br>
   Please update the <b>${spreadsheetName}</b> Google Sheet with the correct email addresses before the reminder email sends at 5:00AM on <b>${hostReminderDate.toDateString()}</b>.
