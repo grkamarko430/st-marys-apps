@@ -4,18 +4,22 @@ var ATTACHMENTS = [DriveApp.getFileById('1shafaAPgLAMYFEvoqQUsI9pcCmpT7F8E')] //
 
 
 function sendReminderEmails() {
+  Logger.log('Starting sendReminderEmails function');
   // Open the specific spreadsheet using its ID
   var spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
   var sheet = spreadsheet.getSheetByName('Schedule');
   var spreadsheetName = spreadsheet.getName();
   var spreadsheetUrl = spreadsheet.getUrl();
+  Logger.log('Opened spreadsheet: ' + spreadsheetName);
   
   // Get data starting from A3
   var dataRange = sheet.getRange("A2:D" + sheet.getLastRow());
   var data = dataRange.getValues();
+  Logger.log('Retrieved data from spreadsheet');
   
   // Get today's date
   var today = new Date();
+  Logger.log('Today\'s date: ' + today.toDateString());
   
   // Iterate through each row of data (skipping the header row)
   for (var i = 1; i < data.length; i++) {
@@ -23,6 +27,7 @@ function sendReminderEmails() {
     var eventDate = new Date(row[0]);
     var family = row[2]
     var emails = row[3];
+    Logger.log('Processing row ' + i + ': ' + family + ' on ' + eventDate.toDateString());
     
     // Calculate the date six days before the event
     var secretaryNotifDate = new Date(eventDate.getTime());
@@ -34,20 +39,24 @@ function sendReminderEmails() {
 
     // Check if today is the secretary notification date
     if (today.toDateString() === secretaryNotifDate.toDateString() && (!emails || emails.trim() === '')) {
+      Logger.log('Sending notification email to secretary for ' + family);
       // Send the email
       sendNotificationEmail(family, eventDate, hostReminderDate, spreadsheetName, spreadsheetUrl);
     }
     
     // Check if today is the host reminder date
     if (today.toDateString() === hostReminderDate.toDateString()) {
+      Logger.log('Sending reminder email to host ' + family);
       // Send the email
       sendEmail(family, eventDate, emails);
     }
   }
+  Logger.log('Finished sendReminderEmails function');
 }
 
 // function to send the notification email to the secretary
 function sendNotificationEmail(family, eventDate, hostReminderDate, spreadsheetName, spreadsheetUrl) {
+  Logger.log('Starting sendNotificationEmail function for ' + family);
   var userEmail = Session.getActiveUser().getEmail();
   var subject = "Missing Coffee Hour Host Emails " + eventDate.toDateString();
   var message = `Dear Secretary,<br><br>
@@ -63,12 +72,15 @@ function sendNotificationEmail(family, eventDate, hostReminderDate, spreadsheetN
     subject: subject,
     htmlBody: message
   });
+  Logger.log('Notification email sent to ' + userEmail);
 }
 
 
 function sendEmail(family, eventDate, emails) {
+  Logger.log('Starting sendEmail function for ' + family);
   var emailAddresses = formatEmailAddresses(emails); 
   var subject = "REMINDER - Coffee Hour Hosts " + eventDate.toDateString();
+  Logger.log('Email addresses: ' + emailAddresses);
   console.log(ATTACHMENTS)
 
   var message_head = `Dear ${family},<br><br>
@@ -81,10 +93,12 @@ function sendEmail(family, eventDate, emails) {
     subject: subject, 
     htmlBody: message, 
     attachments: ATTACHMENTS});
+  Logger.log('Reminder email sent to ' + emailAddresses);
 }
 
 // function to format and return the email address for each family
 function formatEmailAddresses(emailString) {
+  Logger.log('Formatting email addresses');
   if (typeof emailString !== 'string') {
     throw new Error('Input must be a string');
   }
@@ -93,6 +107,7 @@ function formatEmailAddresses(emailString) {
 
 // function to get the instructions for coffee hour
 function getCoffeeHourInstructions() {
+  Logger.log('Retrieving coffee hour instructions');
   try {
     var doc = DocumentApp.openById(EMAIL_TEMPLATE_ID);
     var body = doc.getBody();
