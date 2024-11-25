@@ -10,6 +10,7 @@ function sendReminderEmails() {
   var sheet = spreadsheet.getSheetByName('Schedule');
   var spreadsheetName = spreadsheet.getName();
   var spreadsheetUrl = spreadsheet.getUrl();
+  var emailSent = false;
   Logger.log('Opened spreadsheet: ' + spreadsheetName);
   
   // Get data starting from A3
@@ -27,21 +28,25 @@ function sendReminderEmails() {
     var eventDate = new Date(row[0]);
     var family = row[2]
     var emails = row[3];
-    Logger.log('Processing row ' + i + ': ' + family + ' on ' + eventDate.toDateString());
+    // Logger.log('Processing row ' + i + ': ' + family + ' on ' + eventDate.toDateString());
     
     // Calculate the date six days before the event
     var secretaryNotifDate = new Date(eventDate.getTime());
     secretaryNotifDate.setDate(secretaryNotifDate.getDate() - 6);
+    
 
     // Calculate the date four days before the event
     var hostReminderDate = new Date(eventDate.getTime());
     hostReminderDate.setDate(hostReminderDate.getDate() - 4);
+    Logger.log('secretaryNotifDate: ' + secretaryNotifDate.toDateString());
+    Logger.log('hostReminderDate: ' + hostReminderDate.toDateString());
 
     // Check if today is the secretary notification date
     if (today.toDateString() === secretaryNotifDate.toDateString() && (!emails || emails.trim() === '')) {
       Logger.log('Sending notification email to secretary for ' + family);
       // Send the email
       sendNotificationEmail(family, eventDate, hostReminderDate, spreadsheetName, spreadsheetUrl);
+      emailSent = true;
     }
     
     // Check if today is the host reminder date
@@ -49,7 +54,11 @@ function sendReminderEmails() {
       Logger.log('Sending reminder email to host ' + family);
       // Send the email
       sendEmail(family, eventDate, emails);
+      emailSent = true;
     }
+  }
+  if (!emailSent) {
+    Logger.log('No emails were sent today');
   }
   Logger.log('Finished sendReminderEmails function');
 }
