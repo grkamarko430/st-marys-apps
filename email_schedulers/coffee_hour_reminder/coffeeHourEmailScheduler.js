@@ -34,12 +34,9 @@ function sendReminderEmails() {
     var secretaryNotifDate = new Date(eventDate.getTime());
     secretaryNotifDate.setDate(secretaryNotifDate.getDate() - 6);
     
-
     // Calculate the date four days before the event
     var hostReminderDate = new Date(eventDate.getTime());
     hostReminderDate.setDate(hostReminderDate.getDate() - 4);
-    Logger.log('secretaryNotifDate: ' + secretaryNotifDate.toDateString());
-    Logger.log('hostReminderDate: ' + hostReminderDate.toDateString());
 
     // Check if today is the secretary notification date
     if (today.toDateString() === secretaryNotifDate.toDateString() && (!emails || emails.trim() === '')) {
