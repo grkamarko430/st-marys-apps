@@ -33,7 +33,7 @@ function sendReminderEmails() {
     hostReminderDate.setDate(hostReminderDate.getDate() - 4);
 
     // Check if today is the secretary notification date
-    if (today.toDateString() === secretaryNotifDate.toDateString()) {
+    if (today.toDateString() === secretaryNotifDate.toDateString() && (!emails || emails.trim() === '')) {
       // Send the email
       sendNotificationEmail(family, eventDate, hostReminderDate, spreadsheetName, spreadsheetUrl);
     }
