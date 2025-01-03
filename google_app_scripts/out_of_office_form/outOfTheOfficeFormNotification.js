@@ -2,7 +2,7 @@ function onFormSubmit(e) {
   Logger.log(JSON.stringify(e));
   
   // Get the form responses
-  var responses = e.response.getItemResponses();
+  var responses = e.getItemResponses();
   
   // Extract the necessary information from the responses
   var name = responses[1].getResponse(); // Assuming the name is the second field
