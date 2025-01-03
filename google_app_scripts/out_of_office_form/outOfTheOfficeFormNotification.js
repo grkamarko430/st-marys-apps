@@ -50,12 +50,6 @@ function onFormSubmit(e) {
                "Reason: " + reason + "\n\n" +
                "Remaining PTO Hours: " + remainingHours.PTO + "\n" +
                "Remaining Sick Hours: " + remainingHours.Sick + "\n\n";
-    
-    // Add the record to the spreadsheet before approval
-    var spreadsheetId = '1emPPuVCCD0kMGbF-EZeANHK1VVx9DgwENaj5NePVmew'; // Replace with your spreadsheet ID
-    var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName("OOTORequests");
-    var rowIndex = sheet.getLastRow() + 1;
-    sheet.appendRow([name, startDate, endDate, hours, reason, requesterEmail, "Pending"]);
 
     // Send the email to all recipients
     MailApp.sendEmail(recipients.join(','), subject, body);
@@ -63,8 +57,8 @@ function onFormSubmit(e) {
     // Define the email body for the approver
     var approverBody = body +
                "Please review the request and approve or deny it using the following links:\n" +
-               "Approve: " + getApprovalLink(name, startDate, endDate, reason, requesterEmail, true) + "\n" +
-               "Deny: " + getApprovalLink(name, startDate, endDate, reason, requesterEmail, false);
+               "Approve: " + getApprovalLink(name, startDate, endDate, hours, reason, requesterEmail, true) + "\n" +
+               "Deny: " + getApprovalLink(name, startDate, endDate, hours, reason, requesterEmail, false);
     
     // Send the email to the approver
     MailApp.sendEmail(approverEmail, subject, approverBody);
@@ -94,6 +88,7 @@ function doGet(e) {
     var name = e.parameter.name;
     var startDate = e.parameter.startDate;
     var endDate = e.parameter.endDate;
+    var hours = e.parameter.hours;
     var reason = e.parameter.reason;
     var requesterEmail = e.parameter.requesterEmail;
     var approved = e.parameter.approved === 'true';
@@ -137,7 +132,7 @@ function doGet(e) {
                 "Name: " + name + "\n" +
                 "Start Date: " + startDate + "\n" +
                 "End Date: " + endDate + "\n" +
-                "Hours: " + data[rowIndex - 1][3] + "\n" + // Use the hours from the spreadsheet
+                "Hours: " + hours + "\n" +
                 "Reason: " + reason + "\n\n" +
                 "Status: " + (approved ? "Approved" : "Denied") + "\n\n" +
                 "Remaining PTO Hours: " + remainingHours.PTO + "\n" +
@@ -159,17 +154,17 @@ function calculateRemainingHours(requesterEmail) {
   var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName("OOTORequests");
   var data = sheet.getDataRange().getValues();
   
-  var totalPTO = 90;
-  var totalSick = 90;
+  var totalPTO = 120;
+  var totalSick = 120;
   var usedPTO = 0;
   var usedSick = 0;
 
   for (var i = 1; i < data.length; i++) {
-    if (data[i][0] === requesterEmail) {
-      if (data[i][3] === "PTO") {
-        usedPTO += parseFloat(data[i][2]);
-      } else if (data[i][3] === "Sick") {
-        usedSick += parseFloat(data[i][2]);
+    if (data[i][5] === requesterEmail && data[i][6] === "Approved") {
+      if (data[i][4] === "PTO") {
+        usedPTO += parseFloat(data[i][3]);
+      } else if (data[i][4] === "Sick") {
+        usedSick += parseFloat(data[i][3]);
       }
     }
   }
