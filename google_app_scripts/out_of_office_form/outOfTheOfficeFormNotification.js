@@ -33,20 +33,25 @@ function onFormSubmit(e) {
   
   var approverEmail = "grkamarko430@gmail.com"; // Replace with the actual approver's email
   
-  // Define the email subject and body
-  var subject = "Day Out of Office Request";
+  // Define the email subject and body for recipients
+  var subject = "Out of Office Request - " + name;
   var body = "A new day out of office request has been submitted.\n\n" +
              "Name: " + name + "\n" +
              "Start Date: " + startDate + "\n" +
              "End Date: " + endDate + "\n" +
-             "Reason: " + reason + "\n\n" +
+             "Reason: " + reason + "\n\n";
+  
+  // Send the email to all recipients
+  MailApp.sendEmail(recipients.join(','), subject, body);
+  
+  // Define the email body for the approver
+  var approverBody = body +
              "Please review the request and approve or deny it using the following links:\n" +
              "Approve: " + getApprovalLink(name, startDate, endDate, reason, requesterEmail, true) + "\n" +
              "Deny: " + getApprovalLink(name, startDate, endDate, reason, requesterEmail, false);
   
-  // Send the email to all recipients
-  MailApp.sendEmail(recipients.join(','), subject, body);
-  MailApp.sendEmail(approverEmail, subject, body);
+  // Send the email to the approver
+  MailApp.sendEmail(approverEmail, subject, approverBody);
 }
 
 function getApprovalLink(name, startDate, endDate, reason, requesterEmail, isApproved) {
@@ -71,9 +76,15 @@ function doGet(e) {
   // Open the specific spreadsheet by its ID
   var spreadsheetId = '1emPPuVCCD0kMGbF-EZeANHK1VVx9DgwENaj5NePVmew'; // Replace with your spreadsheet ID
   var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName("OOTORequests");
-  sheet.appendRow([name, startDate, endDate, reason, approved ? "Approved" : "Denied"]);
   
-  var subject = "Your Day Out of Office Request";
+  if (sheet) {
+    sheet.appendRow([name, startDate, endDate, reason, approved ? "Approved" : "Denied"]);
+  } else {
+    Logger.log("Sheet not found: OOTORequests");
+    return ContentService.createTextOutput("Error: Sheet not found.");
+  }
+  
+  var subject = "Review of Out of Office Request";
   var body = "Your request for a day out of office has been " + (approved ? "approved" : "denied") + ".\n\n" +
              "Name: " + name + "\n" +
              "Start Date: " + startDate + "\n" +
