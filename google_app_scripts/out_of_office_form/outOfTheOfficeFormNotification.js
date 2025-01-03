@@ -94,25 +94,34 @@ function doGet(e) {
     var name = e.parameter.name;
     var startDate = e.parameter.startDate;
     var endDate = e.parameter.endDate;
-    var hours = e.parameter.hours;
     var reason = e.parameter.reason;
     var requesterEmail = e.parameter.requesterEmail;
     var approved = e.parameter.approved === 'true';
     
     // Open the specific spreadsheet by its ID
     var spreadsheetId = '1emPPuVCCD0kMGbF-EZeANHK1VVx9DgwENaj5NePVmew'; // Replace with your spreadsheet ID
-    var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName("OOTORequests");
+    var spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    var sheet = spreadsheet.getSheetByName("OOTORequests");
+    
+    // Check if the sheet exists, if not, create it
+    if (!sheet) {
+      sheet = spreadsheet.insertSheet("OOTORequests");
+      // Optionally, add headers to the new sheet
+      sheet.appendRow(["Name", "Start Date", "End Date", "Hours", "Reason", "Requester Email", "Status"]);
+    }
+    
     var data = sheet.getDataRange().getValues();
     var rowIndex = -1;
-
+    
     // Find the row to update
     for (var i = 1; i < data.length; i++) {
+      Logger.log("Checking row " + i + ": " + JSON.stringify(data[i]));
       if (data[i][0] === name && data[i][1] === startDate && data[i][2] === endDate && data[i][4] === reason && data[i][5] === requesterEmail) {
         rowIndex = i + 1;
         break;
       }
     }
-
+  
     if (rowIndex !== -1) {
       sheet.getRange(rowIndex, 7).setValue(approved ? "Approved" : "Denied");
     } else {
@@ -120,26 +129,19 @@ function doGet(e) {
       return ContentService.createTextOutput("Error: Record not found.");
     }
     
-    if (sheet) {
-      sheet.appendRow([name, startDate, endDate, hours, reason, approved ? "Approved" : "Denied"]);
-    } else {
-      Logger.log("Sheet not found: OOTORequests");
-      return ContentService.createTextOutput("Error: Sheet not found.");
-    }
-    
     var remainingHours = calculateRemainingHours(requesterEmail);
     Logger.log("Remaining Hours: " + JSON.stringify(remainingHours));
     
     var subject = "Review of Out of Office Request";
     var body = "Your request for a day out of office has been " + (approved ? "approved" : "denied") + ".\n\n" +
-               "Name: " + name + "\n" +
-               "Start Date: " + startDate + "\n" +
-               "End Date: " + endDate + "\n" +
-               "Hours: " + hours + "\n" +
-               "Reason: " + reason + "\n\n" +
-               "Status: " + (approved ? "Approved" : "Denied") + "\n\n" +
-               "Remaining PTO Hours: " + remainingHours.PTO + "\n" +
-               "Remaining Sick Hours: " + remainingHours.Sick;
+                "Name: " + name + "\n" +
+                "Start Date: " + startDate + "\n" +
+                "End Date: " + endDate + "\n" +
+                "Hours: " + data[rowIndex - 1][3] + "\n" + // Use the hours from the spreadsheet
+                "Reason: " + reason + "\n\n" +
+                "Status: " + (approved ? "Approved" : "Denied") + "\n\n" +
+                "Remaining PTO Hours: " + remainingHours.PTO + "\n" +
+                "Remaining Sick Hours: " + remainingHours.Sick;
     
     // Notify the requester and the group
     MailApp.sendEmail(requesterEmail, subject, body);
