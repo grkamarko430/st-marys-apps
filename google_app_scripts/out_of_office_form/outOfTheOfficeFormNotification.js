@@ -88,7 +88,7 @@ function doGet(e) {
     var name = e.parameter.name;
     var startDate = e.parameter.startDate;
     var endDate = e.parameter.endDate;
-    var hours = e.parameter.hours;
+    var hours = parseFloat(e.parameter.hours);
     var reason = e.parameter.reason;
     var requesterEmail = e.parameter.requesterEmail;
     var approved = e.parameter.approved === 'true';
@@ -108,6 +108,18 @@ function doGet(e) {
     var remainingHours = calculateRemainingHours(requesterEmail);
     Logger.log("Remaining Hours: " + JSON.stringify(remainingHours));
     
+    // Adjust remaining hours if the request is approved
+    if (approved) {
+      if (reason === "PTO") {
+        remainingHours.PTO -= hours;
+      } else if (reason === "Sick") {
+        remainingHours.Sick -= hours;
+      }
+    }
+    
+    // Append the new request to the sheet
+    sheet.appendRow([name, startDate, endDate, hours, reason, requesterEmail, approved ? "Approved" : "Denied"]);
+
     var subject = "Review of Out of Office Request";
     var body = "Your request for a day out of office has been " + (approved ? "approved" : "denied") + ".\n\n" +
                 "Name: " + name + "\n" +
@@ -136,7 +148,7 @@ function calculateRemainingHours(requesterEmail) {
   var data = sheet.getDataRange().getValues();
   
   var totalPTO = 120;
-  var totalSick = 120;
+  var totalSick = 112;
   var usedPTO = 0;
   var usedSick = 0;
 
