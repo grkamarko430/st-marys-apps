@@ -51,6 +51,12 @@ function onFormSubmit(e) {
                "Remaining PTO Hours: " + remainingHours.PTO + "\n" +
                "Remaining Sick Hours: " + remainingHours.Sick + "\n\n";
     
+    // Add the record to the spreadsheet before approval
+    var spreadsheetId = '1emPPuVCCD0kMGbF-EZeANHK1VVx9DgwENaj5NePVmew'; // Replace with your spreadsheet ID
+    var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName("OOTORequests");
+    var rowIndex = sheet.getLastRow() + 1;
+    sheet.appendRow([name, startDate, endDate, hours, reason, requesterEmail, "Pending"]);
+
     // Send the email to all recipients
     MailApp.sendEmail(recipients.join(','), subject, body);
     
@@ -67,7 +73,7 @@ function onFormSubmit(e) {
   }
 }
 
-function getApprovalLink(name, startDate, endDate, reason, requesterEmail, isApproved) {
+function getApprovalLink(name, startDate, endDate, hours, reason, requesterEmail, isApproved) {
   try {
     var scriptUrl = "https://script.google.com/a/nativityofthetheotokos.org/macros/s/AKfycbzn4JDKCtsyDBi5pBncZ-PgN1D07LNXbQtuDstq5iqmogPsTQFLrhuBAteavcFlkR1RAg/exec"; // Replace with your deployment URL
     return scriptUrl + "?name=" + encodeURIComponent(name) +
@@ -96,9 +102,26 @@ function doGet(e) {
     // Open the specific spreadsheet by its ID
     var spreadsheetId = '1emPPuVCCD0kMGbF-EZeANHK1VVx9DgwENaj5NePVmew'; // Replace with your spreadsheet ID
     var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName("OOTORequests");
+    var data = sheet.getDataRange().getValues();
+    var rowIndex = -1;
+
+    // Find the row to update
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] === name && data[i][1] === startDate && data[i][2] === endDate && data[i][4] === reason && data[i][5] === requesterEmail) {
+        rowIndex = i + 1;
+        break;
+      }
+    }
+
+    if (rowIndex !== -1) {
+      sheet.getRange(rowIndex, 7).setValue(approved ? "Approved" : "Denied");
+    } else {
+      Logger.log("Record not found for updating approval status.");
+      return ContentService.createTextOutput("Error: Record not found.");
+    }
     
     if (sheet) {
-      sheet.appendRow([name, startDate, endDate, reason, approved ? "Approved" : "Denied"]);
+      sheet.appendRow([name, startDate, endDate, hours, reason, approved ? "Approved" : "Denied"]);
     } else {
       Logger.log("Sheet not found: OOTORequests");
       return ContentService.createTextOutput("Error: Sheet not found.");
