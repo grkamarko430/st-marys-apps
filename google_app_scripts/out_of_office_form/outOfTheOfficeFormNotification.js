@@ -105,25 +105,6 @@ function doGet(e) {
       sheet.appendRow(["Name", "Start Date", "End Date", "Hours", "Reason", "Requester Email", "Status"]);
     }
     
-    var data = sheet.getDataRange().getValues();
-    var rowIndex = -1;
-    
-    // Find the row to update
-    for (var i = 1; i < data.length; i++) {
-      Logger.log("Checking row " + i + ": " + JSON.stringify(data[i]));
-      if (data[i][0] === name && data[i][1] === startDate && data[i][2] === endDate && data[i][4] === reason && data[i][5] === requesterEmail) {
-        rowIndex = i + 1;
-        break;
-      }
-    }
-  
-    if (rowIndex !== -1) {
-      sheet.getRange(rowIndex, 7).setValue(approved ? "Approved" : "Denied");
-    } else {
-      Logger.log("Record not found for updating approval status.");
-      return ContentService.createTextOutput("Error: Record not found.");
-    }
-    
     var remainingHours = calculateRemainingHours(requesterEmail);
     Logger.log("Remaining Hours: " + JSON.stringify(remainingHours));
     
