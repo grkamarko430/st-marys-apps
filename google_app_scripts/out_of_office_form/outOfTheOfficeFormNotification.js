@@ -67,7 +67,9 @@ function doGet(e) {
   var requesterEmail = e.parameter.requesterEmail;
   var approved = e.parameter.approved === 'true';
   
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Requests");
+  // Open the specific spreadsheet by its ID
+  var spreadsheetId = '1emPPuVCCD0kMGbF-EZeANHK1VVx9DgwENaj5NePVmew'; // Replace with your spreadsheet ID
+  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName("Requests");
   sheet.appendRow([name, startDate, endDate, reason, approved ? "Approved" : "Denied"]);
   
   var subject = "Your Day Out of Office Request";
