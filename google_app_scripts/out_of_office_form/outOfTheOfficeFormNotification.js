@@ -3,13 +3,17 @@ function onFormSubmit(e) {
   
   // Open the form by its ID
   var form = FormApp.openById('119iFJQUDm1GsKjrqUNvjdSJdGFzZf_qIaCapY0EZeFQ'); // Replace with your form ID
-  
+  Logger.log(form);
+  Logger.log(form.getResponses());
+
   // Get the latest response
   var formResponses = form.getResponses();
   var latestResponse = formResponses[formResponses.length - 1];
+  Logger.log("latestResponse: " + latestResponse);
   
   // Get the item responses from the latest response
   var responses = latestResponse.getItemResponses();
+  Logger.log("responses: " + responses);
   
   // Extract the necessary information from the responses
   var name = responses[1].getResponse(); // Assuming the name is the second field
