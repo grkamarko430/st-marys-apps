@@ -49,7 +49,7 @@ function onFormSubmit(e) {
 }
 
 function getApprovalLink(name, startDate, endDate, reason, requesterEmail, isApproved) {
-  var scriptUrl = ScriptApp.getService().getUrl();
+  var scriptUrl = "https://script.google.com/macros/s/AKfycbzn4JDKCtsyDBi5pBncZ-PgN1D07LNXbQtuDstq5iqmogPsTQFLrhuBAteavcFlkR1RAg/exec"; // Replace with your deployment URL
   return scriptUrl + "?name=" + encodeURIComponent(name) +
          "&startDate=" + encodeURIComponent(startDate) +
          "&endDate=" + encodeURIComponent(endDate) +
@@ -69,7 +69,7 @@ function doGet(e) {
   
   // Open the specific spreadsheet by its ID
   var spreadsheetId = '1emPPuVCCD0kMGbF-EZeANHK1VVx9DgwENaj5NePVmew'; // Replace with your spreadsheet ID
-  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName("Requests");
+  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName("OOTORequests");
   sheet.appendRow([name, startDate, endDate, reason, approved ? "Approved" : "Denied"]);
   
   var subject = "Your Day Out of Office Request";
