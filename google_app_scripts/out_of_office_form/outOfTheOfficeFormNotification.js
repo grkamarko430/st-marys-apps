@@ -1,4 +1,5 @@
 function onFormSubmit(e) {
+  Logger.log(JSON.stringify(e));
   // Get the form responses
   var responses = e.values;
   
@@ -8,6 +9,12 @@ function onFormSubmit(e) {
   var endDate = responses[3]; // Assuming the end date is the fourth field
   var reason = responses[4]; // Assuming the reason is the fifth field
   var requesterEmail = responses[5]; // Assuming the requester's email is the sixth field
+  
+  Logger.log("Name: " + name);
+  Logger.log("Start Date: " + startDate);
+  Logger.log("End Date: " + endDate);
+  Logger.log("Reason: " + reason);
+  Logger.log("Requester Email: " + requesterEmail);
   
   // Define the email recipients
   var recipients = "group@example.com"; // Replace with the actual email group
@@ -30,6 +37,7 @@ function onFormSubmit(e) {
 }
 
 function getApprovalLink(name, startDate, endDate, reason, requesterEmail, isApproved) {
+  Logger.log("Generating approval link for: " + name);
   var scriptUrl = ScriptApp.getService().getUrl();
   return scriptUrl + "?name=" + encodeURIComponent(name) +
          "&startDate=" + encodeURIComponent(startDate) +
@@ -40,6 +48,7 @@ function getApprovalLink(name, startDate, endDate, reason, requesterEmail, isApp
 }
 
 function doGet(e) {
+  Logger.log("Handling doGet with parameters: " + JSON.stringify(e.parameter));
   var name = e.parameter.name;
   var startDate = e.parameter.startDate;
   var endDate = e.parameter.endDate;
@@ -65,11 +74,3 @@ function doGet(e) {
   return ContentService.createTextOutput("Request " + (approved ? "approved" : "denied") + ".");
 }
 
-// Set up the trigger to run the onFormSubmit function when a form is submitted
-function createTrigger() {
-  var form = FormApp.openById('119iFJQUDm1GsKjrqUNvjdSJdGFzZf_qIaCapY0EZeFQ'); // Replace with your form ID
-  ScriptApp.newTrigger('onFormSubmit')
-           .forForm(form)
-           .onFormSubmit()
-           .create();
-}
