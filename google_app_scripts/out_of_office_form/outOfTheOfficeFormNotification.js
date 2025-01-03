@@ -1,8 +1,15 @@
 function onFormSubmit(e) {
   Logger.log(JSON.stringify(e));
   
-  // Get the form responses
-  var responses = e.getItemResponses();
+  // Open the form by its ID
+  var form = FormApp.openById('119iFJQUDm1GsKjrqUNvjdSJdGFzZf_qIaCapY0EZeFQ'); // Replace with your form ID
+  
+  // Get the latest response
+  var formResponses = form.getResponses();
+  var latestResponse = formResponses[formResponses.length - 1];
+  
+  // Get the item responses from the latest response
+  var responses = latestResponse.getItemResponses();
   
   // Extract the necessary information from the responses
   var name = responses[1].getResponse(); // Assuming the name is the second field
@@ -17,9 +24,9 @@ function onFormSubmit(e) {
   Logger.log("Reason: " + reason);
   Logger.log("Requester Email: " + requesterEmail);
   
-  // Define the email recipients
-  var recipients = "group@example.com"; // Replace with the actual email group
-  var approverEmail = "approver@example.com"; // Replace with the actual approver's email
+  // Define the email recipients as an array
+  var recipients = ["grkamarko430@gmail.com"]; // Replace with the actual email addresses
+  var approverEmail = "grkamarko430@gmail.com"; // Replace with the actual approver's email
   
   // Define the email subject and body
   var subject = "Day Out of Office Request";
@@ -32,8 +39,8 @@ function onFormSubmit(e) {
              "Approve: " + getApprovalLink(name, startDate, endDate, reason, requesterEmail, true) + "\n" +
              "Deny: " + getApprovalLink(name, startDate, endDate, reason, requesterEmail, false);
   
-  // Send the email
-  MailApp.sendEmail(recipients, subject, body);
+  // Send the email to all recipients
+  MailApp.sendEmail(recipients.join(','), subject, body);
   MailApp.sendEmail(approverEmail, subject, body);
 }
 
@@ -69,7 +76,7 @@ function doGet(e) {
   
   // Notify the requester and the group
   MailApp.sendEmail(requesterEmail, subject, body);
-  MailApp.sendEmail("group@example.com", subject, body);
+  MailApp.sendEmail(recipients.join(','), subject, body);
   
   return ContentService.createTextOutput("Request " + (approved ? "approved" : "denied") + ".");
 }
