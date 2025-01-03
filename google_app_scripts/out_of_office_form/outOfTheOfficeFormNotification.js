@@ -1,5 +1,5 @@
 // Define the email recipients as a global variable
-var recipients = ["grkamarko430@gmail.com"]; // Replace with the actual email addresses
+var recipients = ["grkamarko430@gmail.com", "hsmalek@gmail.com", "chrisk63@comcast.net", "frdamaskinos@outlook.com", "sylviatsakalos@gmail.com"]; // Replace with the actual email addresses
 
 function onFormSubmit(e) {
   try {
@@ -34,7 +34,7 @@ function onFormSubmit(e) {
     Logger.log("Reason: " + reason);
     Logger.log("Requester Email: " + requesterEmail);
     
-    var approverEmail = "grkamarko430@gmail.com"; // Replace with the actual approver's email
+    var approverEmail = "frdamaskinos@outlook.com"; // Replace with the actual approver's email
     
     // Calculate remaining hours
     var remainingHours = calculateRemainingHours(requesterEmail);
