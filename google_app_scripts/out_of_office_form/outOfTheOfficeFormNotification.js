@@ -1,3 +1,6 @@
+// Define the email recipients as a global variable
+var recipients = ["grkamarko430@gmail.com"]; // Replace with the actual email addresses
+
 function onFormSubmit(e) {
   Logger.log(JSON.stringify(e));
   
@@ -28,8 +31,6 @@ function onFormSubmit(e) {
   Logger.log("Reason: " + reason);
   Logger.log("Requester Email: " + requesterEmail);
   
-  // Define the email recipients as an array
-  var recipients = ["grkamarko430@gmail.com"]; // Replace with the actual email addresses
   var approverEmail = "grkamarko430@gmail.com"; // Replace with the actual approver's email
   
   // Define the email subject and body
@@ -49,7 +50,7 @@ function onFormSubmit(e) {
 }
 
 function getApprovalLink(name, startDate, endDate, reason, requesterEmail, isApproved) {
-  var scriptUrl = "https://script.google.com/macros/s/AKfycbzn4JDKCtsyDBi5pBncZ-PgN1D07LNXbQtuDstq5iqmogPsTQFLrhuBAteavcFlkR1RAg/exec"; // Replace with your deployment URL
+  var scriptUrl = "https://script.google.com/a/nativityofthetheotokos.org/macros/s/AKfycbzn4JDKCtsyDBi5pBncZ-PgN1D07LNXbQtuDstq5iqmogPsTQFLrhuBAteavcFlkR1RAg/exec"; // Replace with your deployment URL
   return scriptUrl + "?name=" + encodeURIComponent(name) +
          "&startDate=" + encodeURIComponent(startDate) +
          "&endDate=" + encodeURIComponent(endDate) +
