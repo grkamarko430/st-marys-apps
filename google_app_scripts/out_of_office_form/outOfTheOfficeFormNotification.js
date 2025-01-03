@@ -16,11 +16,11 @@ function onFormSubmit(e) {
   Logger.log("responses: " + responses);
   
   // Extract the necessary information from the responses
-  var name = responses[1].getResponse(); // Assuming the name is the second field
-  var startDate = responses[2].getResponse(); // Assuming the start date is the third field
-  var endDate = responses[3].getResponse(); // Assuming the end date is the fourth field
-  var reason = responses[4].getResponse(); // Assuming the reason is the fifth field
-  var requesterEmail = responses[5].getResponse(); // Assuming the requester's email is the sixth field
+  var name = responses[0].getResponse(); // Assuming the name is the second field
+  var startDate = responses[1].getResponse(); // Assuming the start date is the third field
+  var endDate = responses[2].getResponse(); // Assuming the end date is the fourth field
+  var reason = responses[3].getResponse(); // Assuming the reason is the fifth field
+  var requesterEmail = responses[4].getResponse(); // Assuming the requester's email is the sixth field
   
   Logger.log("Name: " + name);
   Logger.log("Start Date: " + startDate);
