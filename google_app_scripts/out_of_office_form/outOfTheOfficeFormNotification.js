@@ -1,14 +1,15 @@
 function onFormSubmit(e) {
   Logger.log(JSON.stringify(e));
+  
   // Get the form responses
-  var responses = e.values;
+  var responses = e.response.getItemResponses();
   
   // Extract the necessary information from the responses
-  var name = responses[1]; // Assuming the name is the second field
-  var startDate = responses[2]; // Assuming the start date is the third field
-  var endDate = responses[3]; // Assuming the end date is the fourth field
-  var reason = responses[4]; // Assuming the reason is the fifth field
-  var requesterEmail = responses[5]; // Assuming the requester's email is the sixth field
+  var name = responses[1].getResponse(); // Assuming the name is the second field
+  var startDate = responses[2].getResponse(); // Assuming the start date is the third field
+  var endDate = responses[3].getResponse(); // Assuming the end date is the fourth field
+  var reason = responses[4].getResponse(); // Assuming the reason is the fifth field
+  var requesterEmail = responses[5].getResponse(); // Assuming the requester's email is the sixth field
   
   Logger.log("Name: " + name);
   Logger.log("Start Date: " + startDate);
@@ -37,7 +38,6 @@ function onFormSubmit(e) {
 }
 
 function getApprovalLink(name, startDate, endDate, reason, requesterEmail, isApproved) {
-  Logger.log("Generating approval link for: " + name);
   var scriptUrl = ScriptApp.getService().getUrl();
   return scriptUrl + "?name=" + encodeURIComponent(name) +
          "&startDate=" + encodeURIComponent(startDate) +
@@ -73,4 +73,3 @@ function doGet(e) {
   
   return ContentService.createTextOutput("Request " + (approved ? "approved" : "denied") + ".");
 }
-
