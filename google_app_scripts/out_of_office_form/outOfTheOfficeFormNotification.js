@@ -148,7 +148,7 @@ function calculateRemainingHours(requesterEmail) {
   var data = sheet.getDataRange().getValues();
   
   var totalPTO = 120;
-  var totalSick = 112;
+  var totalSick = 120;
   var usedPTO = 0;
   var usedSick = 0;
 
