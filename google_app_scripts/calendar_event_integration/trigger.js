@@ -18,13 +18,13 @@ function emailSyncTrigger() {
   // Create a new trigger that runs syncCalendarEvents whenever an event is updated in the source calendar
   ScriptApp.newTrigger('syncCalendarEvents')
     .forUserCalendar(sourceCalendarId)
-    .onEventUpdated()
+    .whenEventUpdated()
     .create();
   
   // Create a new trigger that runs syncCalendarEvents whenever an event is created in the source calendar
   ScriptApp.newTrigger('syncCalendarEvents')
     .forUserCalendar(sourceCalendarId)
-    .onEventCreated()
+    .whenEventAdded()
     .create();
   
   Logger.log("Triggers created successfully for calendar ID: " + sourceCalendarId);
