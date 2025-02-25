@@ -64,22 +64,17 @@ For your primary calendar, you can simply use the word `primary` as the Calendar
 1. When an event is updated in the source calendar, the trigger activates the `syncCalendarEvents()` function
 2. The function checks for events that occurred in the last hour or will occur any time in the future (up to 5 years ahead)
 3. Events containing the tag character (`*`) in their titles are synchronized to the target calendar
-4. If an event with the same title already exists in the target calendar (at the same time), it won't be duplicated
-5. The tag character is removed from the title when creating the event in the target calendar
-6. Recurring events are properly handled - the entire recurrence pattern is copied to the target calendar
+4. Recurring events are excluded from synchronization even if they have the tag character
+5. If an event with the same title already exists in the target calendar (at the same time), it won't be duplicated
+6. The tag character is removed from the title when creating the event in the target calendar
 
 ## Recurring Events
 
-The integration supports recurring events with the following features:
-- The entire recurrence pattern is copied to the target calendar
-- Supported recurrence types include:
-  - Daily events
-  - Weekly events (including specific days of the week)
-  - Monthly events
-  - Yearly events
-  - Custom recurrence patterns
-- Changes to individual instances of a recurring series are also synchronized
-- Deleting a recurring event removes all instances from the target calendar
+The integration explicitly excludes recurring events from being synchronized:
+- Any event that is part of a recurring series will be skipped
+- This applies even if the event has the tag character in its title
+- This behavior ensures that recurring events are only maintained in the source calendar
+- To have an event appear in both calendars, use single events instead of recurring ones
 
 ## Error Handling
 

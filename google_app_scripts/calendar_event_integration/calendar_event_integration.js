@@ -81,7 +81,21 @@ function processEvent(sourceCalendar, targetCalendar, eventId, tag) {
     
     // Process only if the event has the specified tag in its title
     if (event.getTitle().includes(tag)) {
-      Logger.log("Event has tag - checking if it exists in target calendar");
+      Logger.log("Event has tag - checking if it's recurring");
+      
+      // Check if the event is recurring - if so, skip it
+      try {
+        var isRecurring = event.isRecurringEvent();
+        if (isRecurring) {
+          Logger.log("Event is recurring - skipping: " + event.getTitle());
+          return;
+        }
+      } catch (recurrenceError) {
+        Logger.log("Error checking if event is recurring: " + recurrenceError.toString());
+        // Continue processing if we can't determine if it's recurring
+      }
+      
+      Logger.log("Event is not recurring - checking if it exists in target calendar");
       
       // Check if the event already exists in target calendar
       var targetEvents = targetCalendar.getEvents(
@@ -100,41 +114,8 @@ function processEvent(sourceCalendar, targetCalendar, eventId, tag) {
         var guestList = event.getGuestList();
         Logger.log("Number of guests: " + guestList.length);
         
-        // Check if the event is recurring
-        var isRecurring = event.isRecurringEvent();
-        if (isRecurring) {
-          Logger.log("Event is recurring");
-          
-          // For recurring events, we need to get the series and apply the same recurrence
-          try {
-            var eventSeries = event.getEventSeries();
-            
-            // Create recurring event series
-            var newEvent = targetCalendar.createEventSeries(
-              event.getTitle(), 
-              event.getStartTime(), 
-              event.getEndTime(), 
-              getRecurrenceSettings(eventSeries),
-              {
-                description: event.getDescription(),
-                location: event.getLocation(),
-                guests: guestList.map(function(guest) { 
-                  Logger.log("Adding guest: " + guest.getEmail());
-                  return guest.getEmail(); 
-                }).join(',')
-              }
-            );
-            
-            Logger.log("Successfully created new recurring event: " + event.getTitle());
-          } catch (recurrenceError) {
-            Logger.log("Error handling recurrence, creating as normal event: " + recurrenceError.toString());
-            // Fallback to normal event if recurrence handling fails
-            createNormalEvent(targetCalendar, event, guestList);
-          }
-        } else {
-          // Create standard non-recurring event
-          createNormalEvent(targetCalendar, event, guestList);
-        }
+        // Create standard non-recurring event
+        createNormalEvent(targetCalendar, event, guestList);
       } else {
         Logger.log("Event already exists in target calendar - skipping: " + event.getTitle());
       }
@@ -242,6 +223,20 @@ function processAllEvents(sourceCalendar, targetCalendar, tag) {
     batch.forEach(function(event) {
       var eventTitle = event.getTitle();
       
+      // Check if the event is recurring - if so, skip it
+      var isRecurring = false;
+      try {
+        isRecurring = event.isRecurringEvent();
+        if (isRecurring) {
+          Logger.log("Event is recurring - skipping: " + eventTitle);
+          skippedEventsCount++;
+          return; // Skip this iteration
+        }
+      } catch (e) {
+        Logger.log("Error checking if event is recurring: " + e.toString());
+        // Continue processing if we can't determine if it's recurring
+      }
+      
       // Check if event exists in target calendar using the pre-fetched events
       var eventExists = potentialTargetEvents.some(function(targetEvent) {
         return targetEvent.getTitle() === eventTitle && 
@@ -253,44 +248,8 @@ function processAllEvents(sourceCalendar, targetCalendar, tag) {
         Logger.log("Creating new event in target calendar: " + eventTitle);
         var guestList = event.getGuestList();
         
-        // Check if the event is recurring
-        var isRecurring = false;
-        try {
-          isRecurring = event.isRecurringEvent();
-        } catch (e) {
-          Logger.log("Error checking if event is recurring: " + e.toString());
-        }
-        
-        if (isRecurring) {
-          Logger.log("Event is recurring");
-          
-          // For recurring events, we need to get the series and apply the same recurrence
-          try {
-            var eventSeries = event.getEventSeries();
-            
-            // Create recurring event series
-            targetCalendar.createEventSeries(
-              eventTitle, 
-              event.getStartTime(), 
-              event.getEndTime(), 
-              getRecurrenceSettings(eventSeries),
-              {
-                description: event.getDescription(),
-                location: event.getLocation(),
-                guests: guestList.map(function(guest) { return guest.getEmail(); }).join(',')
-              }
-            );
-            
-            Logger.log("Successfully created new recurring event: " + eventTitle);
-          } catch (recurrenceError) {
-            Logger.log("Error handling recurrence, creating as normal event: " + recurrenceError.toString());
-            // Fallback to normal event if recurrence handling fails
-            createNormalEvent(targetCalendar, event, guestList);
-          }
-        } else {
-          // Create standard non-recurring event
-          createNormalEvent(targetCalendar, event, guestList);
-        }
+        // Create standard non-recurring event
+        createNormalEvent(targetCalendar, event, guestList);
         
         createdEventsCount++;
       } else {
