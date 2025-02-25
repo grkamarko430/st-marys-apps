@@ -1,5 +1,5 @@
 /**
- * Creates a calendar trigger to automatically run the sync function when events are updated.
+ * Creates calendar triggers to automatically run the sync function when events are created or updated.
  * Removes any existing triggers for the syncCalendarEvents function first to avoid duplicates.
  * This function should be run manually to set up the automation.
  */
@@ -21,5 +21,11 @@ function emailSyncTrigger() {
     .onEventUpdated()
     .create();
   
-  Logger.log("Trigger created successfully for calendar ID: " + sourceCalendarId);
+  // Create a new trigger that runs syncCalendarEvents whenever an event is created in the source calendar
+  ScriptApp.newTrigger('syncCalendarEvents')
+    .forUserCalendar(sourceCalendarId)
+    .onEventCreated()
+    .create();
+  
+  Logger.log("Triggers created successfully for calendar ID: " + sourceCalendarId);
 }
