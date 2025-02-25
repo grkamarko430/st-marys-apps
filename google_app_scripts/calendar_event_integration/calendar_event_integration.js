@@ -117,8 +117,8 @@ function syncCalendarEvents(e) {
  */
 function sendErrorNotification(error) {
   try {
-    // Email recipients
-    var recipients = "secretary@nativityofthetheotokos.org,grkamarko430@gmail.com";
+    // Email recipients from script property (fallback to default if not set)
+    var recipients = PropertiesService.getScriptProperties().getProperty('EMAIL_RECIPIENTS');
     
     // Get calendar IDs for context
     var sourceCalendarId = PropertiesService.getScriptProperties().getProperty('SOURCE_CALENDAR_ID');
