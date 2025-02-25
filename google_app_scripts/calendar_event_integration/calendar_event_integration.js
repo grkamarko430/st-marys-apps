@@ -100,17 +100,41 @@ function processEvent(sourceCalendar, targetCalendar, eventId, tag) {
         var guestList = event.getGuestList();
         Logger.log("Number of guests: " + guestList.length);
         
-        // Create new event in target calendar with same details as source event
-        targetCalendar.createEvent(event.getTitle(), event.getStartTime(), event.getEndTime(), {
-          description: event.getDescription(),
-          location: event.getLocation(),
-          guests: guestList.map(function(guest) { 
-            Logger.log("Adding guest: " + guest.getEmail());
-            return guest.getEmail(); 
-          }).join(',')
-        });
-        
-        Logger.log("Successfully created new event: " + event.getTitle());
+        // Check if the event is recurring
+        var recurrenceData = event.getRecurrence();
+        if (recurrenceData && recurrenceData.length > 0) {
+          Logger.log("Event is recurring with pattern: " + recurrenceData);
+          
+          // Create recurring event with the same recurrence pattern
+          var newEvent = targetCalendar.createEventSeries(
+            event.getTitle(), 
+            event.getStartTime(), 
+            event.getEndTime(), 
+            CalendarApp.newRecurrence().addRawRule(recurrenceData[0]),
+            {
+              description: event.getDescription(),
+              location: event.getLocation(),
+              guests: guestList.map(function(guest) { 
+                Logger.log("Adding guest: " + guest.getEmail());
+                return guest.getEmail(); 
+              }).join(',')
+            }
+          );
+          
+          Logger.log("Successfully created new recurring event: " + event.getTitle());
+        } else {
+          // Create standard non-recurring event
+          targetCalendar.createEvent(event.getTitle(), event.getStartTime(), event.getEndTime(), {
+            description: event.getDescription(),
+            location: event.getLocation(),
+            guests: guestList.map(function(guest) { 
+              Logger.log("Adding guest: " + guest.getEmail());
+              return guest.getEmail(); 
+            }).join(',')
+          });
+          
+          Logger.log("Successfully created new event: " + event.getTitle());
+        }
       } else {
         Logger.log("Event already exists in target calendar - skipping: " + event.getTitle());
       }
@@ -191,12 +215,35 @@ function processAllEvents(sourceCalendar, targetCalendar, tag) {
         Logger.log("Creating new event in target calendar: " + eventTitle);
         var guestList = event.getGuestList();
         
-        // Create new event in target calendar
-        targetCalendar.createEvent(eventTitle, event.getStartTime(), event.getEndTime(), {
-          description: event.getDescription(),
-          location: event.getLocation(),
-          guests: guestList.map(function(guest) { return guest.getEmail(); }).join(',')
-        });
+        // Check if the event is recurring
+        var recurrenceData = event.getRecurrence();
+        if (recurrenceData && recurrenceData.length > 0) {
+          Logger.log("Event is recurring with pattern: " + recurrenceData);
+          
+          // Create recurring event with the same recurrence pattern
+          targetCalendar.createEventSeries(
+            eventTitle, 
+            event.getStartTime(), 
+            event.getEndTime(), 
+            CalendarApp.newRecurrence().addRawRule(recurrenceData[0]),
+            {
+              description: event.getDescription(),
+              location: event.getLocation(),
+              guests: guestList.map(function(guest) { return guest.getEmail(); }).join(',')
+            }
+          );
+          
+          Logger.log("Successfully created new recurring event: " + eventTitle);
+        } else {
+          // Create standard non-recurring event
+          targetCalendar.createEvent(eventTitle, event.getStartTime(), event.getEndTime(), {
+            description: event.getDescription(),
+            location: event.getLocation(),
+            guests: guestList.map(function(guest) { return guest.getEmail(); }).join(',')
+          });
+          
+          Logger.log("Successfully created new event: " + eventTitle);
+        }
         
         createdEventsCount++;
       } else {
@@ -255,5 +302,21 @@ function sendErrorNotification(error) {
   } catch (emailError) {
     // Log if there's an error sending the notification
     Logger.log("Failed to send error notification email: " + emailError.toString());
+  }
+}
+
+/**
+ * Checks if an event is part of a recurring series and returns its recurrence pattern
+ * 
+ * @param {CalendarEvent} event - The event to check
+ * @return {Boolean} True if the event is recurring, false otherwise
+ */
+function isRecurringEvent(event) {
+  try {
+    var recurrence = event.getRecurrence();
+    return recurrence && recurrence.length > 0;
+  } catch (error) {
+    Logger.log("Error checking recurrence: " + error.toString());
+    return false;
   }
 }
