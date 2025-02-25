@@ -149,7 +149,7 @@ function processAllEvents(sourceCalendar, targetCalendar, tag) {
   
   for (var i = 0; i < events.length; i++) {
     var event = events[i];
-    Logger.log("Checking event " + (i+1) + "/" + events.length + ": " + event.getTitle());
+    // Logger.log("Checking event " + (i+1) + "/" + events.length + ": " + event.getTitle());
     
     // Process only events with the specified tag in their title
     if (event.getTitle().includes(tag)) {
