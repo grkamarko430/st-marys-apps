@@ -2,6 +2,7 @@
  * Bulk Delete Calendar Events
  * 
  * This script finds and deletes Google Calendar events that match a specific title.
+ * It allows selecting a specific calendar by its ID.
  */
 
 /**
@@ -9,6 +10,16 @@
  */
 function showDeleteEventsByTitleUI() {
   var ui = SpreadsheetApp.getUi();
+  
+  var calendarIdPrompt = ui.prompt('Calendar Selection',
+      'Enter Calendar ID (leave blank for your default calendar):',
+      ui.ButtonSet.OK_CANCEL);
+  
+  if (calendarIdPrompt.getSelectedButton() == ui.Button.CANCEL) {
+    return;
+  }
+  
+  var calendarId = calendarIdPrompt.getResponseText();
   
   var titlePrompt = ui.prompt('Delete Events by Title',
       'Enter the exact event title to delete:',
@@ -22,16 +33,17 @@ function showDeleteEventsByTitleUI() {
   
   try {
     // Confirm before deletion
+    var calendarName = calendarId === '' ? 'your default calendar' : calendarId;
     var confirmResult = ui.alert(
       'Confirm Deletion',
-      'This will delete ALL events titled "' + eventTitle + '" from your calendar. Continue?',
+      'This will delete ALL events titled "' + eventTitle + '" from ' + calendarName + '. Continue?',
       ui.ButtonSet.YES_NO);
     
     if (confirmResult == ui.Button.NO) {
       return;
     }
     
-    var result = deleteEventsByTitle(eventTitle);
+    var result = deleteEventsByTitle(eventTitle, calendarId);
     ui.alert('Deletion Complete', result.message, ui.ButtonSet.OK);
   } catch (e) {
     ui.alert('Error', 'An error occurred: ' + e.toString(), ui.ButtonSet.OK);
@@ -52,16 +64,36 @@ function onOpen() {
  * Deletes calendar events matching the given title
  * 
  * @param {string} eventTitle - The exact title of events to delete
+ * @param {string} calendarId - Optional calendar ID. If not provided, uses default calendar.
  * @return {Object} Result object containing success status and message
  */
-function deleteEventsByTitle(eventTitle) {
+function deleteEventsByTitle(eventTitle, calendarId) {
   if (!eventTitle) {
     return { success: false, message: 'Missing event title' };
   }
   
   try {
-    // Get the primary calendar
-    var calendar = CalendarApp.getDefaultCalendar();
+    // Get the specified calendar or the default calendar
+    var calendar;
+    
+    if (!calendarId || calendarId.trim() === '') {
+      calendar = CalendarApp.getDefaultCalendar();
+    } else {
+      try {
+        calendar = CalendarApp.getCalendarById(calendarId);
+        if (!calendar) {
+          return { 
+            success: false, 
+            message: 'Could not find a calendar with ID: ' + calendarId 
+          };
+        }
+      } catch (calError) {
+        return { 
+          success: false, 
+          message: 'Invalid calendar ID: ' + calendarId + '. Error: ' + calError.toString() 
+        };
+      }
+    }
     
     // Use a date range that covers all existing events
     // From 10 years ago to 10 years in the future
@@ -119,7 +151,10 @@ function bulkDeleteEventsByTitle() {
   // Set the event title you want to delete
   var eventTitle = "Event Title Here";
   
-  var result = deleteEventsByTitle(eventTitle);
+  // Set the calendar ID (leave empty for default calendar)
+  var calendarId = "";  // e.g. "example@group.calendar.google.com"
+  
+  var result = deleteEventsByTitle(eventTitle, calendarId);
   Logger.log(result.message);
   return result;
 }
