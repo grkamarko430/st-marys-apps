@@ -6,58 +6,118 @@
  */
 
 /**
- * Creates a simple UI to get parameters from the user
+ * Serves HTML content for the web application
  */
-function showDeleteEventsByTitleUI() {
-  var ui = SpreadsheetApp.getUi();
-  
-  var calendarIdPrompt = ui.prompt('Calendar Selection',
-      'Enter Calendar ID (leave blank for your default calendar):',
-      ui.ButtonSet.OK_CANCEL);
-  
-  if (calendarIdPrompt.getSelectedButton() == ui.Button.CANCEL) {
-    return;
-  }
-  
-  var calendarId = calendarIdPrompt.getResponseText();
-  
-  var titlePrompt = ui.prompt('Delete Events by Title',
-      'Enter the exact event title to delete:',
-      ui.ButtonSet.OK_CANCEL);
-  
-  if (titlePrompt.getSelectedButton() == ui.Button.CANCEL) {
-    return;
-  }
-  
-  var eventTitle = titlePrompt.getResponseText();
-  
-  try {
-    // Confirm before deletion
-    var calendarName = calendarId === '' ? 'your default calendar' : calendarId;
-    var confirmResult = ui.alert(
-      'Confirm Deletion',
-      'This will delete ALL events titled "' + eventTitle + '" from ' + calendarName + '. Continue?',
-      ui.ButtonSet.YES_NO);
-    
-    if (confirmResult == ui.Button.NO) {
-      return;
-    }
-    
-    var result = deleteEventsByTitle(eventTitle, calendarId);
-    ui.alert('Deletion Complete', result.message, ui.ButtonSet.OK);
-  } catch (e) {
-    ui.alert('Error', 'An error occurred: ' + e.toString(), ui.ButtonSet.OK);
-  }
-}
-
-/**
- * Creates a menu item when the spreadsheet is opened
- */
-function onOpen() {
-  var ui = SpreadsheetApp.getUi();
-  ui.createMenu('Calendar Tools')
-      .addItem('Delete Events by Title', 'showDeleteEventsByTitleUI')
-      .addToUi();
+function doGet() {
+  return HtmlService.createHtmlOutput(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <base target="_top">
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+          }
+          .container {
+            max-width: 600px;
+            margin: 0 auto;
+          }
+          h1 {
+            color: #4285f4;
+          }
+          .form-group {
+            margin-bottom: 15px;
+          }
+          label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+          }
+          input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+          }
+          button {
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 16px;
+          }
+          button:hover {
+            background-color: #3367d6;
+          }
+          #result {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-left: 5px solid #4285f4;
+            display: none;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1>Bulk Delete Calendar Events</h1>
+          
+          <div class="form-group">
+            <label for="calendarId">Calendar ID (leave blank for default calendar):</label>
+            <input type="text" id="calendarId" name="calendarId" placeholder="example@group.calendar.google.com">
+          </div>
+          
+          <div class="form-group">
+            <label for="eventTitle">Exact Event Title:</label>
+            <input type="text" id="eventTitle" name="eventTitle" required>
+          </div>
+          
+          <button onclick="deleteEvents()">Delete Events</button>
+          
+          <div id="result"></div>
+        </div>
+        
+        <script>
+          function deleteEvents() {
+            const calendarId = document.getElementById('calendarId').value;
+            const eventTitle = document.getElementById('eventTitle').value;
+            
+            if (!eventTitle) {
+              alert('Please enter an event title');
+              return;
+            }
+            
+            const confirmMsg = 'This will delete ALL events titled "' + eventTitle + '" from ' + 
+              (calendarId ? calendarId : 'your default calendar') + '. Continue?';
+            
+            if (confirm(confirmMsg)) {
+              document.getElementById('result').innerHTML = 'Processing...';
+              document.getElementById('result').style.display = 'block';
+              
+              google.script.run
+                .withSuccessHandler(showResult)
+                .withFailureHandler(showError)
+                .deleteEventsByTitle(eventTitle, calendarId);
+            }
+          }
+          
+          function showResult(result) {
+            document.getElementById('result').innerHTML = result.message;
+            document.getElementById('result').style.display = 'block';
+          }
+          
+          function showError(error) {
+            document.getElementById('result').innerHTML = 'Error: ' + error.message;
+            document.getElementById('result').style.display = 'block';
+          }
+        </script>
+      </body>
+    </html>
+  `)
+  .setTitle('Bulk Delete Calendar Events')
+  .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 /**
