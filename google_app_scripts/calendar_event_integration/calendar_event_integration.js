@@ -132,7 +132,7 @@ function processEvent(sourceCalendar, targetCalendar, eventId, tag) {
  * @param {String} tag - The tag to look for in event titles
  */
 function processAllEvents(sourceCalendar, targetCalendar, tag) {
-  // Define time range for events to check: from 1 hour ago to far in the future
+  // Define time range for events to check
   var now = new Date();
   var oneHourAgo = new Date(now.getTime() - (60 * 60 * 1000));
   var fiveYearsLater = new Date(now.getTime() + (5 * 365 * 24 * 60 * 60 * 1000));
@@ -143,54 +143,76 @@ function processAllEvents(sourceCalendar, targetCalendar, tag) {
   var events = sourceCalendar.getEvents(oneHourAgo, fiveYearsLater);
   Logger.log("Found " + events.length + " events to check in source calendar");
   
-  var taggededEventsCount = 0;
+  // Filter events that contain the tag first to reduce the processing set
+  var taggedEvents = events.filter(function(event) {
+    return event.getTitle().includes(tag);
+  });
+  
+  Logger.log("Found " + taggedEvents.length + " tagged events to process");
+  
   var createdEventsCount = 0;
   var skippedEventsCount = 0;
+  var batchSize = 10; // Process events in batches of 10
   
-  for (var i = 0; i < events.length; i++) {
-    var event = events[i];
-    // Logger.log("Checking event " + (i+1) + "/" + events.length + ": " + event.getTitle());
+  // Process events in batches to improve performance
+  for (var i = 0; i < taggedEvents.length; i += batchSize) {
+    var batch = taggedEvents.slice(i, i + batchSize);
+    Logger.log("Processing batch " + (Math.floor(i/batchSize) + 1) + " of " + Math.ceil(taggedEvents.length/batchSize));
     
-    // Process only events with the specified tag in their title
-    if (event.getTitle().includes(tag)) {
-      taggededEventsCount++;
-      Logger.log("Event has tag - checking if it exists in target calendar");
+    // Pre-fetch target events for the entire batch's time range to reduce API calls
+    var batchStartTime = null;
+    var batchEndTime = null;
+    
+    // Find the earliest start time and latest end time in this batch
+    batch.forEach(function(event) {
+      if (!batchStartTime || event.getStartTime() < batchStartTime) {
+        batchStartTime = event.getStartTime();
+      }
+      if (!batchEndTime || event.getEndTime() > batchEndTime) {
+        batchEndTime = event.getEndTime();
+      }
+    });
+    
+    // Fetch all potential target events in this time range at once
+    var potentialTargetEvents = targetCalendar.getEvents(batchStartTime, batchEndTime);
+    
+    // Process each event in the batch
+    batch.forEach(function(event) {
+      var eventTitle = event.getTitle();
       
-      // Check if the event already exists in target calendar
-      var targetEvents = targetCalendar.getEvents(event.getStartTime(), event.getEndTime(), { search: event.getTitle() });
-      Logger.log("Found " + targetEvents.length + " potential matching events in target calendar");
+      // Check if event exists in target calendar using the pre-fetched events
+      var eventExists = potentialTargetEvents.some(function(targetEvent) {
+        return targetEvent.getTitle() === eventTitle && 
+               targetEvent.getStartTime().getTime() === event.getStartTime().getTime() &&
+               targetEvent.getEndTime().getTime() === event.getEndTime().getTime();
+      });
       
-      if (targetEvents.length === 0) {
-        Logger.log("Creating new event in target calendar: " + event.getTitle());
-        Logger.log("Start: " + event.getStartTime() + ", End: " + event.getEndTime());
-        Logger.log("Location: " + (event.getLocation() || "None"));
-        
-        // Get the guest list for this event
+      if (!eventExists) {
+        Logger.log("Creating new event in target calendar: " + eventTitle);
         var guestList = event.getGuestList();
-        Logger.log("Number of guests: " + guestList.length);
         
-        // Create new event in target calendar with same details as source event
-        targetCalendar.createEvent(event.getTitle(), event.getStartTime(), event.getEndTime(), {
+        // Create new event in target calendar
+        targetCalendar.createEvent(eventTitle, event.getStartTime(), event.getEndTime(), {
           description: event.getDescription(),
           location: event.getLocation(),
-          guests: guestList.map(function(guest) { 
-            Logger.log("Adding guest: " + guest.getEmail());
-            return guest.getEmail(); 
-          }).join(',')
+          guests: guestList.map(function(guest) { return guest.getEmail(); }).join(',')
         });
         
-        Logger.log("Successfully created new event: " + event.getTitle());
         createdEventsCount++;
       } else {
-        Logger.log("Event already exists in target calendar - skipping: " + event.getTitle());
         skippedEventsCount++;
       }
+    });
+    
+    // Add a small pause between batches to avoid hitting quota limits
+    if (i + batchSize < taggedEvents.length) {
+      Utilities.sleep(100);
     }
   }
   
   Logger.log("Scan summary:");
   Logger.log("Total events checked: " + events.length);
-  Logger.log("Tagged events found: " + taggededEventsCount);
+  Logger.log("Tagged events found: " + taggedEvents.length);
   Logger.log("Events created: " + createdEventsCount);
   Logger.log("Events skipped (already exist): " + skippedEventsCount);
 }
