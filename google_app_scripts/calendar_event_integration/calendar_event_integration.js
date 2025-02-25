@@ -8,6 +8,7 @@
  */
 function syncCalendarEvents(e) {
   Logger.log("Starting syncCalendarEvents function");
+  Logger.log("Event object: " + JSON.stringify(e));
   try {
     // Get calendar IDs from either the event object or script properties
     var sourceCalendarId = e ? e.calendarId : PropertiesService.getScriptProperties().getProperty('SOURCE_CALENDAR_ID');
@@ -160,6 +161,14 @@ function processAllEvents(sourceCalendar, targetCalendar, tag) {
       Logger.log("Found " + targetEvents.length + " potential matching events in target calendar");
       
       if (targetEvents.length === 0) {
+        Logger.log("Creating new event in target calendar: " + event.getTitle());
+        Logger.log("Start: " + event.getStartTime() + ", End: " + event.getEndTime());
+        Logger.log("Location: " + (event.getLocation() || "None"));
+        
+        // Get the guest list for this event
+        var guestList = event.getGuestList();
+        Logger.log("Number of guests: " + guestList.length);
+        
         // Create new event in target calendar with same details as source event
         targetCalendar.createEvent(event.getTitle(), event.getStartTime(), event.getEndTime(), {
           description: event.getDescription(),
@@ -169,6 +178,8 @@ function processAllEvents(sourceCalendar, targetCalendar, tag) {
             return guest.getEmail(); 
           }).join(',')
         });
+        
+        Logger.log("Successfully created new event: " + event.getTitle());
         createdEventsCount++;
       } else {
         Logger.log("Event already exists in target calendar - skipping: " + event.getTitle());
