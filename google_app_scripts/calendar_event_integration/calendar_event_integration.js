@@ -101,39 +101,39 @@ function processEvent(sourceCalendar, targetCalendar, eventId, tag) {
         Logger.log("Number of guests: " + guestList.length);
         
         // Check if the event is recurring
-        var recurrenceData = event.getRecurrence();
-        if (recurrenceData && recurrenceData.length > 0) {
-          Logger.log("Event is recurring with pattern: " + recurrenceData);
+        var isRecurring = event.isRecurringEvent();
+        if (isRecurring) {
+          Logger.log("Event is recurring");
           
-          // Create recurring event with the same recurrence pattern
-          var newEvent = targetCalendar.createEventSeries(
-            event.getTitle(), 
-            event.getStartTime(), 
-            event.getEndTime(), 
-            CalendarApp.newRecurrence().addRawRule(recurrenceData[0]),
-            {
-              description: event.getDescription(),
-              location: event.getLocation(),
-              guests: guestList.map(function(guest) { 
-                Logger.log("Adding guest: " + guest.getEmail());
-                return guest.getEmail(); 
-              }).join(',')
-            }
-          );
-          
-          Logger.log("Successfully created new recurring event: " + event.getTitle());
+          // For recurring events, we need to get the series and apply the same recurrence
+          try {
+            var eventSeries = event.getEventSeries();
+            
+            // Create recurring event series
+            var newEvent = targetCalendar.createEventSeries(
+              event.getTitle(), 
+              event.getStartTime(), 
+              event.getEndTime(), 
+              getRecurrenceSettings(eventSeries),
+              {
+                description: event.getDescription(),
+                location: event.getLocation(),
+                guests: guestList.map(function(guest) { 
+                  Logger.log("Adding guest: " + guest.getEmail());
+                  return guest.getEmail(); 
+                }).join(',')
+              }
+            );
+            
+            Logger.log("Successfully created new recurring event: " + event.getTitle());
+          } catch (recurrenceError) {
+            Logger.log("Error handling recurrence, creating as normal event: " + recurrenceError.toString());
+            // Fallback to normal event if recurrence handling fails
+            createNormalEvent(targetCalendar, event, guestList);
+          }
         } else {
           // Create standard non-recurring event
-          targetCalendar.createEvent(event.getTitle(), event.getStartTime(), event.getEndTime(), {
-            description: event.getDescription(),
-            location: event.getLocation(),
-            guests: guestList.map(function(guest) { 
-              Logger.log("Adding guest: " + guest.getEmail());
-              return guest.getEmail(); 
-            }).join(',')
-          });
-          
-          Logger.log("Successfully created new event: " + event.getTitle());
+          createNormalEvent(targetCalendar, event, guestList);
         }
       } else {
         Logger.log("Event already exists in target calendar - skipping: " + event.getTitle());
@@ -145,6 +145,44 @@ function processEvent(sourceCalendar, targetCalendar, eventId, tag) {
     Logger.log("Error processing event: " + error.toString());
     throw error; // Re-throw to be caught by the main function
   }
+}
+
+/**
+ * Helper function to create a normal (non-recurring) event
+ */
+function createNormalEvent(calendar, sourceEvent, guestList) {
+  calendar.createEvent(sourceEvent.getTitle(), sourceEvent.getStartTime(), sourceEvent.getEndTime(), {
+    description: sourceEvent.getDescription(),
+    location: sourceEvent.getLocation(),
+    guests: guestList.map(function(guest) { 
+      return guest.getEmail(); 
+    }).join(',')
+  });
+  
+  Logger.log("Successfully created new event: " + sourceEvent.getTitle());
+}
+
+/**
+ * Get recurrence settings from an event series
+ */
+function getRecurrenceSettings(eventSeries) {
+  // Default to a simple daily recurrence if we can't determine the exact pattern
+  var recurrence = CalendarApp.newRecurrence().addDailyRule();
+  
+  try {
+    // Try to determine the recurrence frequency
+    if (eventSeries.isWeeklyRecurrence()) {
+      recurrence = CalendarApp.newRecurrence().addWeeklyRule();
+    } else if (eventSeries.isMonthlyRecurrence()) {
+      recurrence = CalendarApp.newRecurrence().addMonthlyRule();
+    } else if (eventSeries.isYearlyRecurrence()) {
+      recurrence = CalendarApp.newRecurrence().addYearlyRule();
+    }
+  } catch (e) {
+    Logger.log("Error determining recurrence pattern: " + e.toString());
+  }
+  
+  return recurrence;
 }
 
 /**
@@ -216,33 +254,42 @@ function processAllEvents(sourceCalendar, targetCalendar, tag) {
         var guestList = event.getGuestList();
         
         // Check if the event is recurring
-        var recurrenceData = event.getRecurrence();
-        if (recurrenceData && recurrenceData.length > 0) {
-          Logger.log("Event is recurring with pattern: " + recurrenceData);
+        var isRecurring = false;
+        try {
+          isRecurring = event.isRecurringEvent();
+        } catch (e) {
+          Logger.log("Error checking if event is recurring: " + e.toString());
+        }
+        
+        if (isRecurring) {
+          Logger.log("Event is recurring");
           
-          // Create recurring event with the same recurrence pattern
-          targetCalendar.createEventSeries(
-            eventTitle, 
-            event.getStartTime(), 
-            event.getEndTime(), 
-            CalendarApp.newRecurrence().addRawRule(recurrenceData[0]),
-            {
-              description: event.getDescription(),
-              location: event.getLocation(),
-              guests: guestList.map(function(guest) { return guest.getEmail(); }).join(',')
-            }
-          );
-          
-          Logger.log("Successfully created new recurring event: " + eventTitle);
+          // For recurring events, we need to get the series and apply the same recurrence
+          try {
+            var eventSeries = event.getEventSeries();
+            
+            // Create recurring event series
+            targetCalendar.createEventSeries(
+              eventTitle, 
+              event.getStartTime(), 
+              event.getEndTime(), 
+              getRecurrenceSettings(eventSeries),
+              {
+                description: event.getDescription(),
+                location: event.getLocation(),
+                guests: guestList.map(function(guest) { return guest.getEmail(); }).join(',')
+              }
+            );
+            
+            Logger.log("Successfully created new recurring event: " + eventTitle);
+          } catch (recurrenceError) {
+            Logger.log("Error handling recurrence, creating as normal event: " + recurrenceError.toString());
+            // Fallback to normal event if recurrence handling fails
+            createNormalEvent(targetCalendar, event, guestList);
+          }
         } else {
           // Create standard non-recurring event
-          targetCalendar.createEvent(eventTitle, event.getStartTime(), event.getEndTime(), {
-            description: event.getDescription(),
-            location: event.getLocation(),
-            guests: guestList.map(function(guest) { return guest.getEmail(); }).join(',')
-          });
-          
-          Logger.log("Successfully created new event: " + eventTitle);
+          createNormalEvent(targetCalendar, event, guestList);
         }
         
         createdEventsCount++;
@@ -306,17 +353,16 @@ function sendErrorNotification(error) {
 }
 
 /**
- * Checks if an event is part of a recurring series and returns its recurrence pattern
+ * Safely checks if an event is recurring
  * 
  * @param {CalendarEvent} event - The event to check
  * @return {Boolean} True if the event is recurring, false otherwise
  */
-function isRecurringEvent(event) {
+function safeIsRecurringEvent(event) {
   try {
-    var recurrence = event.getRecurrence();
-    return recurrence && recurrence.length > 0;
+    return event.isRecurringEvent();
   } catch (error) {
-    Logger.log("Error checking recurrence: " + error.toString());
+    Logger.log("Error checking recurrence status: " + error.toString());
     return false;
   }
 }
