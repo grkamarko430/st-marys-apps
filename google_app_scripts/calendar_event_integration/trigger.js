@@ -1,5 +1,5 @@
 function createTrigger() {
-    var sourceCalendarId = 'source-calendar-id@example.com';
+    var sourceCalendarId = PropertiesService.getScriptProperties().getProperty('SOURCE_CALENDAR_ID');
     ScriptApp.newTrigger('syncCalendarEvents')
       .forUserCalendar(sourceCalendarId)
       .onEventUpdated()

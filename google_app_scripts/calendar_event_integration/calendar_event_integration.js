@@ -1,9 +1,9 @@
 function syncCalendarEvents(e) {
-    var sourceCalendarId = 'source-calendar-id@example.com';
-    var targetCalendarId = 'target-calendar-id@example.com';
-    var tag = 'SpecificTag'; // Replace with the specific name or tag to look for in event titles
+    // var sourceCalendarId = PropertiesService.getScriptProperties().getProperty('SOURCE_CALENDAR_ID');
+    var targetCalendarId = PropertiesService.getScriptProperties().getProperty('TARGET_CALENDAR_ID');
+    var tag = '*'; // Tag to look for in event titles
   
-    var sourceCalendar = CalendarApp.getCalendarById(sourceCalendarId);
+    // var sourceCalendar = CalendarApp.getCalendarById(sourceCalendarId);
     var targetCalendar = CalendarApp.getCalendarById(targetCalendarId);
   
     var event = e.calendarEvent;
