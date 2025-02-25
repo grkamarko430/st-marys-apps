@@ -35,15 +35,17 @@ function syncCalendarEvents(e) {
     Logger.log("Successfully accessed source calendar: " + sourceCalendar.getName());
     Logger.log("Successfully accessed target calendar: " + targetCalendar.getName());
     
-    // Define time range for events to check: from 1 hour ago to tomorrow
+    // Define time range for events to check: from 1 hour ago to far in the future
     var now = new Date();
     var oneHourAgo = new Date(now.getTime() - (60 * 60 * 1000));
-    var tomorrow = new Date(now.getTime() + (24 * 60 * 60 * 1000));
     
-    Logger.log("Checking for events between: " + oneHourAgo.toISOString() + " and " + tomorrow.toISOString());
+    // Set end date far in the future (5 years) to catch all upcoming events
+    var fiveYearsLater = new Date(now.getTime() + (5 * 365 * 24 * 60 * 60 * 1000));
+    
+    Logger.log("Checking for events between: " + oneHourAgo.toISOString() + " and " + fiveYearsLater.toISOString());
     
     // Fetch events from source calendar within the defined time range
-    var events = sourceCalendar.getEvents(oneHourAgo, tomorrow);
+    var events = sourceCalendar.getEvents(oneHourAgo, fiveYearsLater);
     Logger.log("Found " + events.length + " events to check in source calendar");
     
     var taggededEventsCount = 0;

@@ -47,7 +47,7 @@ Run the `emailSyncTrigger()` function once to set up automatic synchronization. 
 ## How It Works
 
 1. When an event is updated in the source calendar, the trigger activates the `syncCalendarEvents()` function
-2. The function checks for events that occurred in the last hour or will occur in the next 24 hours
+2. The function checks for events that occurred in the last hour or will occur any time in the future (up to 5 years ahead)
 3. Events containing the tag character (`*`) in their titles are synchronized to the target calendar
 4. If an event with the same title already exists in the target calendar (at the same time), it won't be duplicated
 
