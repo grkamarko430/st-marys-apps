@@ -40,11 +40,11 @@ function syncCalendarEvents(e) {
     if (e && e.eventId) {
       // Process only the specific event that triggered this function
       Logger.log("Processing specific event with ID: " + e.eventId);
-      processEvent(sourceCalendar, targetCalendar, e.eventId, tag);
+      processEvent(sourceCalendar, targetCalendar, e.eventId, tag, sourceCalendarId, targetCalendarId);
     } else {
       // Fallback to scanning all events (for manual runs)
       Logger.log("No specific event ID provided - running full scan");
-      processAllEvents(sourceCalendar, targetCalendar, tag);
+      processAllEvents(sourceCalendar, targetCalendar, tag, sourceCalendarId, targetCalendarId);
     }
     
     Logger.log("Sync completed successfully");
@@ -66,14 +66,25 @@ function syncCalendarEvents(e) {
  * @param {Calendar} targetCalendar - The target calendar object
  * @param {String} eventId - The ID of the specific event to process
  * @param {String} tag - The tag to look for in event titles
+ * @param {String} sourceCalendarId - The source calendar ID
+ * @param {String} targetCalendarId - The target calendar ID
  */
-function processEvent(sourceCalendar, targetCalendar, eventId, tag) {
+function processEvent(sourceCalendar, targetCalendar, eventId, tag, sourceCalendarId, targetCalendarId) {
   try {
     // Get the specific event by ID
     var event = sourceCalendar.getEventById(eventId);
     
     if (!event) {
-      Logger.log("Event not found with ID: " + eventId);
+      Logger.log("Event not found with ID: " + eventId + " using CalendarApp. Trying with advanced API...");
+      // Try using the advanced Calendar API to get the event
+      var advancedEvent = getEventWithAdvancedApi(sourceCalendarId, eventId);
+      if (!advancedEvent) {
+        Logger.log("Event not found with advanced API either. Skipping.");
+        return;
+      }
+      
+      // If we found the event with the advanced API, process it
+      processEventWithAdvancedApi(advancedEvent, sourceCalendarId, targetCalendarId, tag);
       return;
     }
     
@@ -83,19 +94,24 @@ function processEvent(sourceCalendar, targetCalendar, eventId, tag) {
     if (event.getTitle().includes(tag)) {
       Logger.log("Event has tag - checking if it's recurring");
       
-      // Check if the event is recurring - if so, skip it
+      // Check if the event is recurring
       try {
         var isRecurring = event.isRecurringEvent();
         if (isRecurring) {
-          Logger.log("Event is recurring - skipping: " + event.getTitle());
-          return;
+          Logger.log("Event is recurring - processing with advanced API");
+          // Get the event using the advanced API to handle recurring events properly
+          var advancedEvent = getEventWithAdvancedApi(sourceCalendarId, eventId);
+          if (advancedEvent) {
+            processEventWithAdvancedApi(advancedEvent, sourceCalendarId, targetCalendarId, tag);
+            return;
+          }
         }
       } catch (recurrenceError) {
         Logger.log("Error checking if event is recurring: " + recurrenceError.toString());
         // Continue processing if we can't determine if it's recurring
       }
       
-      Logger.log("Event is not recurring - checking if it exists in target calendar");
+      Logger.log("Processing non-recurring event using standard CalendarApp");
       
       // Check if the event already exists in target calendar
       var targetEvents = targetCalendar.getEvents(
@@ -129,6 +145,196 @@ function processEvent(sourceCalendar, targetCalendar, eventId, tag) {
 }
 
 /**
+ * Processes an event using the advanced Calendar API
+ * Handles both recurring and non-recurring events
+ * 
+ * @param {Object} event - The event object from the advanced Calendar API
+ * @param {String} sourceCalendarId - The source calendar ID
+ * @param {String} targetCalendarId - The target calendar ID
+ * @param {String} tag - The tag to filter events
+ */
+function processEventWithAdvancedApi(event, sourceCalendarId, targetCalendarId, tag) {
+  try {
+    Logger.log("Processing event with advanced API: " + event.summary);
+    
+    // Check if event contains the required tag
+    if (!event.summary || !event.summary.includes(tag)) {
+      Logger.log("Event does not have the required tag - ignoring");
+      return;
+    }
+    
+    // Check if the event already exists in target calendar by using extendedProperties
+    var existingEvent = findEventInTargetCalendar(event, targetCalendarId);
+    
+    if (existingEvent) {
+      Logger.log("Event already exists in target calendar - updating: " + event.summary);
+      updateEventInTargetCalendar(existingEvent.id, event, targetCalendarId);
+    } else {
+      Logger.log("Event not found in target calendar - creating new event: " + event.summary);
+      createEventInTargetCalendar(event, sourceCalendarId, targetCalendarId);
+    }
+  } catch (error) {
+    Logger.log("Error processing event with advanced API: " + error.toString());
+    throw error;
+  }
+}
+
+/**
+ * Gets an event using the advanced Calendar API
+ * 
+ * @param {String} calendarId - The calendar ID
+ * @param {String} eventId - The event ID
+ * @return {Object} The event object or null if not found
+ */
+function getEventWithAdvancedApi(calendarId, eventId) {
+  try {
+    Logger.log("Getting event with advanced API: " + eventId);
+    var event = Calendar.Events.get(calendarId, eventId);
+    Logger.log("Successfully retrieved event: " + event.summary);
+    return event;
+  } catch (error) {
+    Logger.log("Error getting event with advanced API: " + error.toString());
+    return null;
+  }
+}
+
+/**
+ * Finds an event in the target calendar using source event properties
+ * Uses extendedProperties to find matched events
+ * 
+ * @param {Object} sourceEvent - The source event from the advanced API
+ * @param {String} targetCalendarId - The target calendar ID
+ * @return {Object} The matching event in the target calendar, or null if not found
+ */
+function findEventInTargetCalendar(sourceEvent, targetCalendarId) {
+  try {
+    // Try to find event using query parameters
+    var timeMin = sourceEvent.start.dateTime || sourceEvent.start.date;
+    var timeMax = sourceEvent.end.dateTime || sourceEvent.end.date;
+    
+    // Add the query parameter for the source event ID in extendedProperties
+    var query = "extendedProperties.private.sourceEventId='" + sourceEvent.id + "'";
+    
+    var events = Calendar.Events.list(targetCalendarId, {
+      timeMin: timeMin,
+      timeMax: timeMax,
+      q: sourceEvent.summary,
+      privateExtendedProperty: "sourceEventId=" + sourceEvent.id
+    });
+    
+    if (events.items && events.items.length > 0) {
+      return events.items[0];
+    }
+    
+    // If we didn't find it with extendedProperties, try a more basic search
+    events = Calendar.Events.list(targetCalendarId, {
+      timeMin: timeMin,
+      timeMax: timeMax,
+      q: sourceEvent.summary,
+      singleEvents: true
+    });
+    
+    if (events.items && events.items.length > 0) {
+      // Find the first event with matching title and time
+      for (var i = 0; i < events.items.length; i++) {
+        var event = events.items[i];
+        if (event.summary === sourceEvent.summary) {
+          return event;
+        }
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    Logger.log("Error finding event in target calendar: " + error.toString());
+    return null;
+  }
+}
+
+/**
+ * Creates an event in the target calendar using the advanced Calendar API
+ * Handles recurring events properly by copying recurrence rules
+ * 
+ * @param {Object} sourceEvent - The source event object
+ * @param {String} sourceCalendarId - The source calendar ID
+ * @param {String} targetCalendarId - The target calendar ID
+ * @return {Object} The created event
+ */
+function createEventInTargetCalendar(sourceEvent, sourceCalendarId, targetCalendarId) {
+  try {
+    // Create a new event object
+    var newEvent = {
+      summary: sourceEvent.summary,
+      description: sourceEvent.description,
+      location: sourceEvent.location,
+      start: sourceEvent.start,
+      end: sourceEvent.end,
+      attendees: sourceEvent.attendees,
+      // Store source event information in extended properties
+      extendedProperties: {
+        private: {
+          sourceEventId: sourceEvent.id,
+          sourceCalendarId: sourceCalendarId
+        }
+      }
+    };
+    
+    // Handle recurring events by copying the recurrence rule
+    if (sourceEvent.recurrence) {
+      newEvent.recurrence = sourceEvent.recurrence;
+    }
+    
+    // Create the event
+    var createdEvent = Calendar.Events.insert(newEvent, targetCalendarId);
+    Logger.log("Successfully created event in target calendar: " + createdEvent.id);
+    return createdEvent;
+  } catch (error) {
+    Logger.log("Error creating event in target calendar: " + error.toString());
+    throw error;
+  }
+}
+
+/**
+ * Updates an event in the target calendar
+ * 
+ * @param {String} eventId - The ID of the event to update
+ * @param {Object} sourceEvent - The source event to use for update data
+ * @param {String} targetCalendarId - The target calendar ID
+ * @return {Object} The updated event
+ */
+function updateEventInTargetCalendar(eventId, sourceEvent, targetCalendarId) {
+  try {
+    // Get the current event first
+    var currentEvent = Calendar.Events.get(targetCalendarId, eventId);
+    
+    // Update the event properties
+    var updatedEvent = {
+      summary: sourceEvent.summary,
+      description: sourceEvent.description,
+      location: sourceEvent.location,
+      start: sourceEvent.start,
+      end: sourceEvent.end,
+      attendees: sourceEvent.attendees,
+      recurrence: sourceEvent.recurrence,
+      // Preserve the extendedProperties
+      extendedProperties: currentEvent.extendedProperties || {
+        private: {
+          sourceEventId: sourceEvent.id
+        }
+      }
+    };
+    
+    // Update the event
+    var result = Calendar.Events.update(updatedEvent, targetCalendarId, eventId);
+    Logger.log("Successfully updated event in target calendar: " + result.id);
+    return result;
+  } catch (error) {
+    Logger.log("Error updating event in target calendar: " + error.toString());
+    throw error;
+  }
+}
+
+/**
  * Helper function to create a normal (non-recurring) event
  */
 function createNormalEvent(calendar, sourceEvent, guestList) {
@@ -144,37 +350,16 @@ function createNormalEvent(calendar, sourceEvent, guestList) {
 }
 
 /**
- * Get recurrence settings from an event series
- */
-function getRecurrenceSettings(eventSeries) {
-  // Default to a simple daily recurrence if we can't determine the exact pattern
-  var recurrence = CalendarApp.newRecurrence().addDailyRule();
-  
-  try {
-    // Try to determine the recurrence frequency
-    if (eventSeries.isWeeklyRecurrence()) {
-      recurrence = CalendarApp.newRecurrence().addWeeklyRule();
-    } else if (eventSeries.isMonthlyRecurrence()) {
-      recurrence = CalendarApp.newRecurrence().addMonthlyRule();
-    } else if (eventSeries.isYearlyRecurrence()) {
-      recurrence = CalendarApp.newRecurrence().addYearlyRule();
-    }
-  } catch (e) {
-    Logger.log("Error determining recurrence pattern: " + e.toString());
-  }
-  
-  return recurrence;
-}
-
-/**
  * Processes all events in the source calendar within a time range
  * This is used as a fallback when running the script manually
  * 
  * @param {Calendar} sourceCalendar - The source calendar object
  * @param {Calendar} targetCalendar - The target calendar object
  * @param {String} tag - The tag to look for in event titles
+ * @param {String} sourceCalendarId - The source calendar ID
+ * @param {String} targetCalendarId - The target calendar ID
  */
-function processAllEvents(sourceCalendar, targetCalendar, tag) {
+function processAllEvents(sourceCalendar, targetCalendar, tag, sourceCalendarId, targetCalendarId) {
   // Define time range for events to check
   var now = new Date();
   var oneHourAgo = new Date(now.getTime() - (60 * 60 * 1000));
@@ -182,6 +367,71 @@ function processAllEvents(sourceCalendar, targetCalendar, tag) {
   
   Logger.log("Checking for events between: " + oneHourAgo.toISOString() + " and " + fiveYearsLater.toISOString());
   
+  // Use the advanced Calendar API for better handling of recurring events
+  try {
+    Logger.log("Using advanced Calendar API to process all events");
+    
+    // Format dates for the API
+    var timeMin = oneHourAgo.toISOString();
+    var timeMax = fiveYearsLater.toISOString();
+    
+    // List all events from the source calendar
+    var events = Calendar.Events.list(sourceCalendarId, {
+      timeMin: timeMin,
+      timeMax: timeMax,
+      singleEvents: false, // Get recurring events as single instances
+      maxResults: 2500 // Get a reasonable number of events
+    });
+    
+    if (!events.items || events.items.length === 0) {
+      Logger.log("No events found in the specified time range");
+      return;
+    }
+    
+    Logger.log("Found " + events.items.length + " events to process with advanced API");
+    
+    // Process each event
+    var processedCount = 0;
+    var skippedCount = 0;
+    
+    for (var i = 0; i < events.items.length; i++) {
+      var event = events.items[i];
+      
+      // Only process events with the tag
+      if (event.summary && event.summary.includes(tag)) {
+        Logger.log("Processing event " + (i + 1) + " of " + events.items.length + ": " + event.summary);
+        
+        try {
+          processEventWithAdvancedApi(event, sourceCalendarId, targetCalendarId, tag);
+          processedCount++;
+        } catch (eventError) {
+          Logger.log("Error processing event " + event.id + ": " + eventError.toString());
+          skippedCount++;
+        }
+        
+        // Add a small delay to avoid hitting quota limits
+        if (i % 10 === 9 && i < events.items.length - 1) {
+          Utilities.sleep(100);
+        }
+      } else {
+        skippedCount++;
+      }
+    }
+    
+    Logger.log("Advanced API processing complete. Processed: " + processedCount + ", Skipped: " + skippedCount);
+  } catch (advancedApiError) {
+    Logger.log("Error using advanced Calendar API: " + advancedApiError.toString());
+    Logger.log("Falling back to standard CalendarApp processing");
+    
+    // Fallback to the original implementation
+    processAllEventsWithCalendarApp(sourceCalendar, targetCalendar, tag, oneHourAgo, fiveYearsLater);
+  }
+}
+
+/**
+ * Processes all events using the standard CalendarApp (fallback method)
+ */
+function processAllEventsWithCalendarApp(sourceCalendar, targetCalendar, tag, oneHourAgo, fiveYearsLater) {
   // Fetch events from source calendar within the defined time range
   var events = sourceCalendar.getEvents(oneHourAgo, fiveYearsLater);
   Logger.log("Found " + events.length + " events to check in source calendar");
@@ -223,12 +473,13 @@ function processAllEvents(sourceCalendar, targetCalendar, tag) {
     batch.forEach(function(event) {
       var eventTitle = event.getTitle();
       
-      // Check if the event is recurring - if so, skip it
+      // Check if the event is recurring - if so, skip it for now
+      // (Advanced API handling is done separately)
       var isRecurring = false;
       try {
         isRecurring = event.isRecurringEvent();
         if (isRecurring) {
-          Logger.log("Event is recurring - skipping: " + eventTitle);
+          Logger.log("Event is recurring - skipping in standard process: " + eventTitle);
           skippedEventsCount++;
           return; // Skip this iteration
         }
