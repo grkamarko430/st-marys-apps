@@ -279,9 +279,41 @@ function createEventInTargetCalendar(sourceEvent, sourceCalendarId, targetCalend
       }
     };
     
-    // Handle recurring events by copying the recurrence rule
+    // Handle recurring events
     if (sourceEvent.recurrence) {
       newEvent.recurrence = sourceEvent.recurrence;
+    }
+    
+    // Copy attendees if they exist
+    if (sourceEvent.attendees) {
+      newEvent.attendees = sourceEvent.attendees;
+    }
+    
+    // Copy color if it exists
+    if (sourceEvent.colorId) {
+      newEvent.colorId = sourceEvent.colorId;
+    }
+    
+    // Copy transparency (busy/free) if it exists
+    if (sourceEvent.transparency) {
+      newEvent.transparency = sourceEvent.transparency;
+    }
+    
+    // Copy visibility if it exists
+    if (sourceEvent.visibility) {
+      newEvent.visibility = sourceEvent.visibility;
+    }
+    
+    // Copy reminders if they exist
+    if (sourceEvent.reminders) {
+      newEvent.reminders = sourceEvent.reminders;
+    }
+    
+    // Copy conferencing data if it exists
+    if (sourceEvent.conferenceData) {
+      newEvent.conferenceData = sourceEvent.conferenceData;
+      // Request that conference data is created
+      newEvent.conferenceDataVersion = 1;
     }
     
     // Create the event
@@ -324,6 +356,43 @@ function updateEventInTargetCalendar(eventId, sourceEvent, targetCalendarId) {
       }
     };
     
+    // Handle recurring events
+    if (sourceEvent.recurrence) {
+      updatedEvent.recurrence = sourceEvent.recurrence;
+    }
+    
+    // Copy attendees if they exist
+    if (sourceEvent.attendees) {
+      updatedEvent.attendees = sourceEvent.attendees;
+    }
+    
+    // Copy color if it exists
+    if (sourceEvent.colorId) {
+      updatedEvent.colorId = sourceEvent.colorId;
+    }
+    
+    // Copy transparency (busy/free) if it exists
+    if (sourceEvent.transparency) {
+      updatedEvent.transparency = sourceEvent.transparency;
+    }
+    
+    // Copy visibility if it exists
+    if (sourceEvent.visibility) {
+      updatedEvent.visibility = sourceEvent.visibility;
+    }
+    
+    // Copy reminders if they exist
+    if (sourceEvent.reminders) {
+      updatedEvent.reminders = sourceEvent.reminders;
+    }
+    
+    // Copy conferencing data if it exists
+    if (sourceEvent.conferenceData) {
+      updatedEvent.conferenceData = sourceEvent.conferenceData;
+      // Request that conference data is created
+      updatedEvent.conferenceDataVersion = 1;
+    }
+
     // Update the event
     var result = Calendar.Events.update(updatedEvent, targetCalendarId, eventId);
     Logger.log("Successfully updated event in target calendar: " + result.id);
