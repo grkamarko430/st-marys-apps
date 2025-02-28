@@ -269,7 +269,6 @@ function createEventInTargetCalendar(sourceEvent, sourceCalendarId, targetCalend
       location: sourceEvent.location,
       start: sourceEvent.start,
       end: sourceEvent.end,
-      attendees: sourceEvent.attendees,
       // Store source event information in extended properties
       extendedProperties: {
         private: {
@@ -346,8 +345,6 @@ function updateEventInTargetCalendar(eventId, sourceEvent, targetCalendarId) {
       location: sourceEvent.location,
       start: sourceEvent.start,
       end: sourceEvent.end,
-      attendees: sourceEvent.attendees,
-      recurrence: sourceEvent.recurrence,
       // Preserve the extendedProperties
       extendedProperties: currentEvent.extendedProperties || {
         private: {
